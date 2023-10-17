@@ -11,7 +11,7 @@ dotenv.config()
 const { ENV, API_KEY_INFURA, LP_PKEY, LP_ADDRESS } =
 	process.env
 
-if (!ENV || !API_KEY_INFURA || !LP_ADDRESS || LP_PKEY) throw new Error('Check Env Variables')
+if (!ENV || !API_KEY_INFURA || !LP_ADDRESS || !LP_PKEY) throw new Error('Check Env Variables')
 export const rpcUrl =
 	ENV === 'production'
 		? `https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}`
