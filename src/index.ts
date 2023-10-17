@@ -33,7 +33,7 @@ async function runRangeOrderBot() {
 	if (!initialized) {
 		try {
 			const data = fs.readFileSync(
-				'./src/scripts/helpers/lpPositions.json',
+				'./src/config/lpPositions.json',
 				'utf8'
 			)
 			lpRangeOrders = JSON.parse(data).lpRangeOrders

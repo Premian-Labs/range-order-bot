@@ -43,7 +43,7 @@ export async function deployLiquidity(
 			`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`
 		)
 		fs.writeFileSync(
-			'./src/scripts/helpers/lpPositions.json',
+			'./src/config/lpPositions.json',
 			JSON.stringify({ lpRangeOrders })
 		)
 		return lpRangeOrders
@@ -51,7 +51,7 @@ export async function deployLiquidity(
 	console.log(`All Positions Successfully Processed for ${market}!`)
 	console.log(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
 	fs.writeFileSync(
-		'./src/scripts/helpers/lpPositions.json',
+		'./src/config/lpPositions.json',
 		JSON.stringify({ lpRangeOrders })
 	)
 	return lpRangeOrders

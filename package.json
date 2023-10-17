@@ -20,7 +20,7 @@
     "build": "tsc --build",
     "postinstall": "npx typechain --target ethers-v6 --out-dir \"./typechain\" \"./abi/*.json\"",
     "prettier": "./node_modules/.bin/prettier --write --ignore-path .gitignore ./src/**",
-    "run": "npx ts-node src/index.ts"
+    "start": "npx ts-node src/index.ts"
   },
   "dependencies": {
     "@types/lodash.isequal": "^4.5.6",
