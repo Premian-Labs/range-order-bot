@@ -80,9 +80,11 @@ two-sided markets.  If price is lower, we will only quote a RIGHT SIDE
 order.
 NOTE: A price lower than 0.004 may cause deposit errors due to valid range
 width collision.
-IMPORTANT: This is NORMALIZED PRICE (in terms of collateral)
+IMPORTANT: This is NORMALIZED PRICE. Calls are price in underlying and puts
+are priced in USDC but based on the strike price. For example, a 1500 strike
+put at 0.004 is (0.004 * 1500) in USDC terms.
  */
-export const minOptionPrice = 0.004 // ie. .004 WETH
+export const minOptionPrice = 0.004
 
 /*
 This is the amount of spot price movement since the last range order update that will force a new
