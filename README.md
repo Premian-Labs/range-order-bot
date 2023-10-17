@@ -32,4 +32,4 @@ There are a couple of things that are needed in order to work with the range ord
    either be `development` or `production`.  
 5. Navigate to `src/config/liquiditySettings.ts` and review each and ever setting.  Instructions & descriptions of 
    settings are provided in the file. 
-6. Run `npm run start` in the command line to run the range order bot.
+6. Run `yarn start` in the command line to run the range order bot.

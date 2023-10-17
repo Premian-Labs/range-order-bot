@@ -1,19 +1,16 @@
 {
-  "name": "@premia/v3-api",
+  "name": "@premia/range-order-bot",
   "version": "0.1.0",
-  "description": "Containerize API for Premia V3 Orderbook",
+  "description": "Market Making Premia V3 Pools",
   "author": "research@premia.finance",
   "license": "MIT",
   "keywords": [
     "premia",
     "v3",
-    "sdk",
-    "api",
     "ethereum",
     "defi",
     "options",
     "trading",
-    "and",
     "market-making"
   ],
   "scripts": {
