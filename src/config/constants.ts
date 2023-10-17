@@ -23,7 +23,7 @@ export const addresses =
 	ENV === 'production' ? arbAddresses : arbGoerliAddresses
 export const productionTokenAddr: Record<string, string> = arbAddresses.tokens
 
-//NOTE: Oracle is only available on arbitrum
+//NOTE: IV Oracle is only available on arbitrum
 export const volatilityOracle = arbAddresses.core.VolatilityOracleProxy.address
 export const rpcUrlOracle = `https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}`
 
