@@ -8,20 +8,16 @@ import arbGoerliAddresses from './arbitrumGoerli.json'
 import {parseEther} from "ethers";
 
 dotenv.config()
-const { ENV, API_KEY_INFURA, DEV_PKEY, DEV_ADDRESS, PROD_PKEY, PROD_ADDRESS } =
+const { ENV, API_KEY_INFURA, LP_PKEY, LP_ADDRESS } =
 	process.env
 
-if (!ENV || !API_KEY_INFURA) throw new Error('Check Env Variables')
-if (ENV === 'production' && (!PROD_PKEY || !PROD_ADDRESS))
-	throw new Error('Need a production credentials')
-if (ENV === 'development' && (!DEV_PKEY || !DEV_ADDRESS))
-	throw new Error('Need a development credentials')
+if (!ENV || !API_KEY_INFURA || !LP_ADDRESS || LP_PKEY) throw new Error('Check Env Variables')
 export const rpcUrl =
 	ENV === 'production'
 		? `https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}`
 		: `https://arbitrum-goerli.infura.io/v3/${API_KEY_INFURA}`
-export const privateKey = ENV === 'production' ? PROD_PKEY : DEV_PKEY
-export const lpAddress = ENV === 'production' ? PROD_ADDRESS : DEV_ADDRESS
+export const privateKey =  LP_PKEY
+export const lpAddress = LP_ADDRESS
 
 export const quoteAddress =
 	ENV === 'production'
