@@ -15,7 +15,7 @@ const ts = moment.utc().unix()
 
 export async function withdrawSettleLiquidity(
 	lpRangeOrders: Position[],
-	market: string
+	market: string,
 ) {
 	const filteredRangeOrders = lpRangeOrders.filter((rangeOrder: Position) => {
 		return rangeOrder.market === market
@@ -31,7 +31,7 @@ export async function withdrawSettleLiquidity(
 		console.log(
 			`\n`,
 			`\n`,
-			`Processing withdraw for ${JSON.stringify(filteredRangeOrder, null, 4)}`
+			`Processing withdraw for ${JSON.stringify(filteredRangeOrder, null, 4)}`,
 		)
 
 		const pool = IPool__factory.connect(filteredRangeOrder.poolAddress, signer)
@@ -55,7 +55,7 @@ export async function withdrawSettleLiquidity(
 		})
 
 		const lpTokenBalance = parseFloat(
-			formatEther(await pool.balanceOf(lpAddress!, tokenId))
+			formatEther(await pool.balanceOf(lpAddress!, tokenId)),
 		)
 
 		const withdrawSize = useRangeOrderBalance
@@ -70,7 +70,7 @@ export async function withdrawSettleLiquidity(
 			!useRangeOrderBalance
 		) {
 			console.log(
-				`WARNING: Can not withdraw or settle. Position balance is smaller than depositSize`
+				`WARNING: Can not withdraw or settle. Position balance is smaller than depositSize`,
 			)
 			continue
 		}
@@ -80,7 +80,7 @@ export async function withdrawSettleLiquidity(
 			console.log(`WARNING: Can not withdraw or settle. No position balance`)
 			// remove range order from array no action can be taken now or later
 			lpRangeOrders = lpRangeOrders.filter(
-				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder)
+				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
 			)
 			continue
 		}
@@ -93,7 +93,7 @@ export async function withdrawSettleLiquidity(
 
 			const confirm = await provider.waitForTransaction(
 				settlePositionTx.hash,
-				1
+				1,
 			)
 
 			if (confirm?.status == 0) {
@@ -105,7 +105,7 @@ export async function withdrawSettleLiquidity(
 			console.log(`LP Range Order settlement confirmed!`)
 			// remove range order from array if settlement is successful
 			lpRangeOrders = lpRangeOrders.filter(
-				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder)
+				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
 			)
 			continue
 		}
@@ -115,7 +115,7 @@ export async function withdrawSettleLiquidity(
 			parseEther(withdrawSize.toString()),
 			0,
 			parseEther('1'),
-			{ gasLimit: 1400000 }
+			{ gasLimit: 1400000 },
 		)
 
 		const confirm = await provider.waitForTransaction(withdrawTx.hash, 1)
@@ -127,7 +127,7 @@ export async function withdrawSettleLiquidity(
 		}
 		// remove range order from array if withdraw is sucesseful
 		lpRangeOrders = lpRangeOrders.filter(
-			(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder)
+			(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
 		)
 		console.log(`LP Range Order withdraw confirmed of size : ${withdrawSize}!`)
 	}
@@ -135,7 +135,7 @@ export async function withdrawSettleLiquidity(
 	console.log(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
 	fs.writeFileSync(
 		'./src/config/lpPositions.json',
-		JSON.stringify({ lpRangeOrders })
+		JSON.stringify({ lpRangeOrders }),
 	)
 	return lpRangeOrders
 }

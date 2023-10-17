@@ -11,7 +11,7 @@ The market name must match the same format as the key values in MarketParams.
 export async function deployLiquidity(
 	lpRangeOrders: Position[],
 	market: string,
-	spotPrice: number
+	spotPrice: number,
 ) {
 	console.log(`Deploying liquidity for ${market}`)
 	try {
@@ -25,7 +25,7 @@ export async function deployLiquidity(
 				marketParams,
 				maturityString,
 				true,
-				lpRangeOrders
+				lpRangeOrders,
 			)
 			// within each maturity, process each put strike
 			lpRangeOrders = await processStrikes(
@@ -34,17 +34,17 @@ export async function deployLiquidity(
 				marketParams,
 				maturityString,
 				false,
-				lpRangeOrders
+				lpRangeOrders,
 			)
 		}
 	} catch (e) {
 		console.log(`${e}`)
 		console.log(
-			`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`
+			`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`,
 		)
 		fs.writeFileSync(
 			'./src/config/lpPositions.json',
-			JSON.stringify({ lpRangeOrders })
+			JSON.stringify({ lpRangeOrders }),
 		)
 		return lpRangeOrders
 	}
@@ -52,7 +52,7 @@ export async function deployLiquidity(
 	console.log(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
 	fs.writeFileSync(
 		'./src/config/lpPositions.json',
-		JSON.stringify({ lpRangeOrders })
+		JSON.stringify({ lpRangeOrders }),
 	)
 	return lpRangeOrders
 }

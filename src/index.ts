@@ -10,20 +10,17 @@ import {
 	withdrawExistingPositions,
 	maxCollateralApproved,
 } from './config/liquiditySettings'
-import {
-	chainlinkAdapter,
-	privateKey,
-	quoteAddress,
-	rpcUrl,
-	routerAddress,
-} from './config/constants'
+import { privateKey, rpcUrl, addresses } from './config/constants'
 import { IChainlinkAdapter__factory, IERC20__factory } from '../typechain'
 import { Position } from './types'
 import fs from 'fs'
 
 const provider = new JsonRpcProvider(rpcUrl)
 const signer = new Wallet(privateKey!, provider) // NOTE: private key is checked in liquiditySettings.ts
-const chainlink = IChainlinkAdapter__factory.connect(chainlinkAdapter, provider)
+const chainlink = IChainlinkAdapter__factory.connect(
+	addresses.core.ChainlinkAdapterProxy.address,
+	provider,
+)
 
 let lpRangeOrders: Position[] = []
 let initialized = false
@@ -32,14 +29,11 @@ async function runRangeOrderBot() {
 	// Runs once when script begins and check if existing position file is available
 	if (!initialized) {
 		try {
-			const data = fs.readFileSync(
-				'./src/config/lpPositions.json',
-				'utf8'
-			)
+			const data = fs.readFileSync('./src/config/lpPositions.json', 'utf8')
 			lpRangeOrders = JSON.parse(data).lpRangeOrders
 		} catch (e) {
 			console.log(
-				`WARNING: no position file found, a new one will be created...`
+				`WARNING: no position file found, a new one will be created...`,
 			)
 		}
 		// Set ALL collateral approvals (base & quote) to max before first deposit cycle
@@ -49,28 +43,31 @@ async function runRangeOrderBot() {
 			for (const market of Object.keys(marketParams)) {
 				const erc20 = IERC20__factory.connect(
 					marketParams[market].address,
-					signer
+					signer,
 				)
 				const response = await erc20.approve(
-					routerAddress,
-					MaxUint256.toString()
+					addresses.core.ERC20Router.address,
+					MaxUint256.toString(),
 				)
 				const confirm = await provider.waitForTransaction(response.hash, 1)
 				if (confirm?.status == 0) {
 					throw new Error(
-						`Max approval NOT set for ${market}! Try again or check provider or ETH balance...`
+						`Max approval NOT set for ${market}! Try again or check provider or ETH balance...`,
 					)
 				}
 				console.log(`${market} approval set to MAX`)
 			}
 
 			// Approval for quote token
-			const erc20 = IERC20__factory.connect(quoteAddress, signer)
-			const response = await erc20.approve(routerAddress, MaxUint256.toString())
+			const erc20 = IERC20__factory.connect(addresses.tokens.USDC, signer)
+			const response = await erc20.approve(
+				addresses.core.ERC20Router.address,
+				MaxUint256.toString(),
+			)
 			const confirm = await provider.waitForTransaction(response.hash, 1)
 			if (confirm?.status == 0) {
 				throw new Error(
-					`Max approval NOT set for USDC! Try again or check provider or ETH balance...`
+					`Max approval NOT set for USDC! Try again or check provider or ETH balance...`,
 				)
 			}
 			console.log(`USDC approval set to MAX`)
@@ -88,8 +85,11 @@ async function runRangeOrderBot() {
 			// get & set spot price
 			marketParams[market].spotPrice = parseFloat(
 				formatEther(
-					await chainlink.getPrice(marketParams[market].address, quoteAddress)
-				)
+					await chainlink.getPrice(
+						marketParams[market].address,
+						addresses.tokens.USDC,
+					),
+				),
 			)
 			// set ts
 			marketParams[market].ts = moment.utc().unix()
@@ -102,7 +102,7 @@ async function runRangeOrderBot() {
 			lpRangeOrders = await deployLiquidity(
 				lpRangeOrders,
 				market,
-				marketParams[market].spotPrice!
+				marketParams[market].spotPrice!,
 			)
 		} else {
 			/*
@@ -118,8 +118,11 @@ async function runRangeOrderBot() {
 			try {
 				curPrice = parseFloat(
 					formatEther(
-						await chainlink.getPrice(marketParams[market].address, quoteAddress)
-					)
+						await chainlink.getPrice(
+							marketParams[market].address,
+							addresses.tokens.USDC,
+						),
+					),
 				)
 			} catch (e) {
 				await delay(5000)
@@ -128,9 +131,9 @@ async function runRangeOrderBot() {
 						formatEther(
 							await chainlink.getPrice(
 								marketParams[market].address,
-								quoteAddress
-							)
-						)
+								addresses.tokens.USDC,
+							),
+						),
 					)
 				} catch (e) {
 					console.log(`WARNIING: failed to get current price for ${market}`)
@@ -143,7 +146,7 @@ async function runRangeOrderBot() {
 			console.log(
 				'current price: ',
 				curPrice,
-				moment.utc().format('YYYY-MM-HH:mm:ss')
+				moment.utc().format('YYYY-MM-HH:mm:ss'),
 			)
 
 			// All conditional thresholds that trigger an update
@@ -166,7 +169,7 @@ async function runRangeOrderBot() {
 				lpRangeOrders = await deployLiquidity(
 					lpRangeOrders,
 					market,
-					marketParams[market].spotPrice!
+					marketParams[market].spotPrice!,
 				)
 			} else {
 				console.log(`No update triggered...`)

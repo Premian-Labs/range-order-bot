@@ -14,7 +14,7 @@ import {
 	MarketParams,
 	PoolKey,
 	TokenType,
-	TokenIdParams
+	TokenIdParams,
 } from '../types'
 import {
 	formatEther,
@@ -24,21 +24,18 @@ import {
 	formatUnits,
 	Signer,
 	Wallet,
-	toBigInt
+	toBigInt,
 } from 'ethers'
 import {
-	chainlinkAdapter,
 	lpAddress,
-	poolFactoryProxy,
 	privateKey,
 	productionTokenAddr,
-	quoteAddress,
-	routerAddress,
 	rpcUrl,
 	rpcUrlOracle,
 	SECONDSINYEAR,
 	volatilityOracle,
-	minTickDistance
+	minTickDistance,
+	addresses,
 } from '../config/constants'
 import {
 	autoDeploy,
@@ -60,13 +57,16 @@ const provider = new JsonRpcProvider(rpcUrl)
 const signer = new Wallet(privateKey!, provider) // NOTE: private key is checked in liquiditySettings.ts
 
 // contracts
-const poolFactory = IPoolFactory__factory.connect(poolFactoryProxy, signer)
+const poolFactory = IPoolFactory__factory.connect(
+	addresses.core.PoolFactoryProxy.address,
+	signer,
+)
 
 // NOTE: Oracle is only available on Arbitrum which is why it has its own provider
 const providerOracle = new JsonRpcProvider(rpcUrlOracle)
 const ivOracle = IVolatilityOracle__factory.connect(
 	volatilityOracle,
-	providerOracle
+	providerOracle,
 )
 
 const validWidths = [
@@ -114,7 +114,7 @@ function createExpiration(exp: string): number {
 
 		if (!lastDay.isSame(expirationMoment)) {
 			throw new Error(
-				`${expirationMoment.toJSON()} is not the last Friday of the month!`
+				`${expirationMoment.toJSON()} is not the last Friday of the month!`,
 			)
 		}
 	}
@@ -127,7 +127,7 @@ async function setApproval(
 	market: string,
 	isCallPool: boolean,
 	collateralValue: number,
-	erc20: IERC20
+	erc20: IERC20,
 ) {
 	let approvalBigInt: bigint
 	if (market === 'WBTC' && isCallPool) {
@@ -144,7 +144,7 @@ async function setApproval(
 		approvalBigInt = parseUnits(collateralValue.toString(), 18)
 	}
 	// Set approval
-	await erc20.approve(routerAddress, approvalBigInt)
+	await erc20.approve(addresses.core.ERC20Router.address, approvalBigInt)
 }
 async function getCollateralApprovalAmt(
 	market: string,
@@ -152,7 +152,7 @@ async function getCollateralApprovalAmt(
 	isLeftSide: boolean,
 	isCallPool: boolean,
 	depositSize: number,
-	strike: number
+	strike: number,
 ) {
 	let collateralName = market
 	// Left side order using (collateral only)
@@ -167,7 +167,7 @@ async function getCollateralApprovalAmt(
 			collateralName = 'USDC'
 		}
 		console.log(
-			`LEFT side collateral required: ${collateralValue} ${collateralName}`
+			`LEFT side collateral required: ${collateralValue} ${collateralName}`,
 		)
 		return collateralValue
 		// Right side order using (collateral only)
@@ -178,7 +178,7 @@ async function getCollateralApprovalAmt(
 			collateralName = 'USDC'
 		}
 		console.log(
-			`RIGHT side collateral required: ${collateralValue} ${collateralName}`
+			`RIGHT side collateral required: ${collateralValue} ${collateralName}`,
 		)
 		return collateralValue
 	} else {
@@ -203,7 +203,7 @@ async function depositRangeOrderLiq(
 	collateralTokenAddr: string,
 	collateralValue: number,
 	isCallPool: boolean,
-	lpRangeOrders: Position[]
+	lpRangeOrders: Position[],
 ) {
 	if (posKey.orderType !== OrderType.LC && posKey.orderType !== OrderType.CS)
 		throw new Error(`CSUP order types not supported: ${posKey.orderType}`)
@@ -213,7 +213,7 @@ async function depositRangeOrderLiq(
 
 	const nearestBelow = await pool.getNearestTicksBelow(
 		posKey.lower,
-		posKey.upper
+		posKey.upper,
 	)
 
 	/*
@@ -249,7 +249,7 @@ async function depositRangeOrderLiq(
 		parseFloat(formatEther(nearestBelow.nearestBelowUpper)),
 		`\n`,
 		`Deposit Size: `,
-		parseFloat(formatEther(depositSizeBigInt))
+		parseFloat(formatEther(depositSizeBigInt)),
 	)
 
 	const depositTx = await pool[
@@ -263,7 +263,7 @@ async function depositRangeOrderLiq(
 		parseEther('1'),
 		{
 			gasLimit: 10000000, // Fails to properly estimate gas limit
-		}
+		},
 	)
 	const confirm = await provider.waitForTransaction(depositTx.hash, 1)
 	console.log('Confirmation status:', confirm?.status)
@@ -298,7 +298,7 @@ async function depositRangeOrderLiq(
 function getValidRangeWidth(
 	lowerTick: number,
 	upperTick: number,
-	orderType: string
+	orderType: string,
 ) {
 	if (upperTick <= lowerTick) throw new Error('Check tick spacing')
 	if (lowerTick <= 0 || upperTick <= 0)
@@ -352,7 +352,7 @@ export async function processStrikes(
 	marketParams: MarketParams,
 	maturityString: string,
 	isCall: boolean,
-	lpRangeOrders: Position[]
+	lpRangeOrders: Position[],
 ) {
 	// format exp 15SEP23 => 1234567891
 	const maturityTimestamp = createExpiration(maturityString)
@@ -364,13 +364,13 @@ export async function processStrikes(
 
 	for (const strike of strikes) {
 		console.log(
-			`Working on ${market} ${isCall ? 'Calls' : 'Puts'} for ${maturityString}`
+			`Working on ${market} ${isCall ? 'Calls' : 'Puts'} for ${maturityString}`,
 		)
 
 		const poolKey: PoolKey = {
 			base: marketParams[market].address,
-			quote: quoteAddress,
-			oracleAdapter: chainlinkAdapter,
+			quote: addresses.tokens.USDC,
+			oracleAdapter: addresses.core.ChainlinkAdapterProxy.address,
 			strike: parseEther(strike.toString()),
 			maturity: maturityTimestamp,
 			isCallPool: isCall,
@@ -383,7 +383,7 @@ export async function processStrikes(
 			console.log(
 				`WARNING: Skipping ${market} ${maturityString} ${
 					isCall ? 'Calls' : 'Puts'
-				}. No Pool Exists `
+				}. No Pool Exists `,
 			)
 			continue
 		}
@@ -395,13 +395,13 @@ export async function processStrikes(
 			productionTokenAddr[market], //NOTE: we use production addresses only
 			parseEther(spotPrice.toString()),
 			parseEther(strike.toString()),
-			parseEther(ttm.toString())
+			parseEther(ttm.toString()),
 		)
 
 		console.log(
 			`IV for ${market} ${strike} ${maturityString}: ${parseFloat(
-				formatEther(iv)
-			)}`
+				formatEther(iv),
+			)}`,
 		)
 
 		const option: Option = blackScholes.option({
@@ -421,7 +421,7 @@ export async function processStrikes(
 			console.log(
 				`WARNING: Skipping ${market} ${maturityString} ${
 					isCall ? 'Calls' : 'Puts'
-				}`
+				}`,
 			)
 			console.log(`option out of range`)
 			console.log(`Delta:${option.delta}`)
@@ -441,7 +441,7 @@ export async function processStrikes(
 				console.log(
 					`WARNING: pool was not deployed, skipping ${market} ${maturityString} ${
 						isCall ? 'Calls' : 'Puts'
-					}`
+					}`,
 				)
 				console.log(confirm)
 				continue
@@ -449,7 +449,7 @@ export async function processStrikes(
 			console.log(
 				`${market} ${maturityString} ${
 					isCall ? 'Call' : 'Put'
-				} pool deployment confirmed!`
+				} pool deployment confirmed!`,
 			)
 		}
 
@@ -463,10 +463,10 @@ export async function processStrikes(
 
 		// check to see if we have positions that can be annihilated
 		let longBalance = parseFloat(
-			formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG))
+			formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG)),
 		)
 		let shortBalance = parseFloat(
-			formatEther(await pool.balanceOf(lpAddress!, TokenType.SHORT))
+			formatEther(await pool.balanceOf(lpAddress!, TokenType.SHORT)),
 		)
 
 		// annihilation process (preprocess before deposits)
@@ -487,10 +487,10 @@ export async function processStrikes(
 			} else {
 				// Update balances post annihilation
 				longBalance = parseFloat(
-					formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG))
+					formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG)),
 				)
 				shortBalance = parseFloat(
-					formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG))
+					formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG)),
 				)
 			}
 		}
@@ -511,18 +511,18 @@ export async function processStrikes(
 			Math.ceil(marketPriceUpper * (1 + rangeWidthMultiplier) * 1000) / 1000
 		targetUpperTick = targetUpperTick > 1 ? 1 : targetUpperTick
 		console.log(
-			`${isCall ? 'Call' : 'Put'} marketPriceUpper: ${marketPriceUpper}`
+			`${isCall ? 'Call' : 'Put'} marketPriceUpper: ${marketPriceUpper}`,
 		)
 		console.log(`${isCall ? 'Call' : 'Put'} targetUpper: ${targetUpperTick}`)
 
 		const [lowerTickCS, upperTickCS] = getValidRangeWidth(
 			marketPriceUpper,
 			targetUpperTick,
-			'RIGHT'
+			'RIGHT',
 		)
 
 		console.log(
-			`Final RIGHT SIDE Order-> Lower: ${lowerTickCS} and Upper: ${upperTickCS}`
+			`Final RIGHT SIDE Order-> Lower: ${lowerTickCS} and Upper: ${upperTickCS}`,
 		)
 
 		// if we have enough long positions for a right side order, use it instead
@@ -546,7 +546,7 @@ export async function processStrikes(
 			false,
 			isCall,
 			marketParams[market].depositSize,
-			strike
+			strike,
 		)
 
 		/*
@@ -577,18 +577,18 @@ export async function processStrikes(
 				Math.ceil(marketPriceLower * (1 - rangeWidthMultiplier) * 1000) / 1000
 
 			console.log(
-				`${isCall ? 'Call' : 'Put'} marketPriceLower: ${marketPriceLower}`
+				`${isCall ? 'Call' : 'Put'} marketPriceLower: ${marketPriceLower}`,
 			)
 			console.log(`${isCall ? 'Call' : 'Put'} targetLower: ${targetLowerTick}`)
 
 			const [lowerTickLC, upperTickLC] = getValidRangeWidth(
 				targetLowerTick,
 				marketPriceLower,
-				'LEFT'
+				'LEFT',
 			)
 
 			console.log(
-				`Final LEFT SIDE Order-> Lower: ${lowerTickLC} and Upper: ${upperTickLC}`
+				`Final LEFT SIDE Order-> Lower: ${lowerTickLC} and Upper: ${upperTickLC}`,
 			)
 
 			// if we have enough short positions, use it instead
@@ -612,7 +612,7 @@ export async function processStrikes(
 				true,
 				isCall,
 				marketParams[market].depositSize,
-				strike
+				strike,
 			)
 		}
 
@@ -628,7 +628,7 @@ export async function processStrikes(
 		// collateral address (for both LEFT & RIGHT side orders)
 		const collateralTokenAddr = isCall
 			? marketParams[market].address
-			: quoteAddress
+			: addresses.tokens.USDC
 
 		const erc20 = IERC20__factory.connect(collateralTokenAddr, signer)
 
@@ -637,23 +637,23 @@ export async function processStrikes(
 		if (market === 'WBTC' && isCall)
 			// WBTC is 8 decimals
 			collateralBalance = parseFloat(
-				formatUnits(await erc20.balanceOf(lpAddress!), 8)
+				formatUnits(await erc20.balanceOf(lpAddress!), 8),
 			)
 		else if (!isCall)
 			// ALL Puts are in USDC and are 6 decimals
 			collateralBalance = parseFloat(
-				formatUnits(await erc20.balanceOf(lpAddress!), 6)
+				formatUnits(await erc20.balanceOf(lpAddress!), 6),
 			)
 		// All other calls are 18 decimals
 		else
 			collateralBalance = parseFloat(
-				formatEther(await erc20.balanceOf(lpAddress!))
+				formatEther(await erc20.balanceOf(lpAddress!)),
 			)
 
 		console.log(
 			`Collateral token balance: ${collateralBalance} ${
 				isCall ? market : 'USDC'
-			}`
+			}`,
 		)
 
 		// determine deposit capabilities
@@ -674,7 +674,7 @@ export async function processStrikes(
 				${market} 
 				${maturityString} 
 				${strike} 
-				${isCall ? 'Call' : 'Put'}`
+				${isCall ? 'Call' : 'Put'}`,
 			)
 			continue
 		}
@@ -682,7 +682,7 @@ export async function processStrikes(
 		// check to see if we have breached our position limit for RIGHT SIDE orders
 		if (shortBalance >= marketParams[market].maxExposure) {
 			console.log(
-				'WARNING: max SHORT exposure reached, no RIGHT SIDE order placed..'
+				'WARNING: max SHORT exposure reached, no RIGHT SIDE order placed..',
 			)
 			// if we are posting options only or have sufficient collateral do deposit: process
 		} else if (rightSideUsesOptions || sufficientCollateral) {
@@ -700,13 +700,13 @@ export async function processStrikes(
 				collateralTokenAddr,
 				rightSideCollateralAmt,
 				isCall,
-				lpRangeOrders
+				lpRangeOrders,
 			)
 		}
 		// check to see if we have breached our position limit for RIGHT SIDE orders
 		if (longBalance >= marketParams[market].maxExposure) {
 			console.log(
-				'WARNING: max LONG exposure reached, no LEFT SIDE order placed..'
+				'WARNING: max LONG exposure reached, no LEFT SIDE order placed..',
 			)
 			// If price of option is too low, we do NOT want to place an LEFT side range order
 			// NOTE: we do not process a trade if price is equal to minOptionPrice
@@ -714,7 +714,7 @@ export async function processStrikes(
 			console.log(
 				`WARNING: Option price too low. No LEFT SIDE order generated for ${market} ${strike} ${maturityString} ${
 					isCall ? 'Calls' : 'Puts'
-				}`
+				}`,
 			)
 			// if we are posting options only or have sufficient collateral do deposit: process
 		} else if (leftSideUsesOptions || sufficientCollateral) {
@@ -731,21 +731,20 @@ export async function processStrikes(
 				collateralTokenAddr,
 				leftSideCollateralAmt,
 				isCall,
-				lpRangeOrders
+				lpRangeOrders,
 			)
 		}
 	}
 	return lpRangeOrders
 }
 
-
 export function formatTokenId({
-								  version,
-								  operator,
-								  lower,
-								  upper,
-								  orderType,
-							  }: TokenIdParams) {
+	version,
+	operator,
+	lower,
+	upper,
+	orderType,
+}: TokenIdParams) {
 	let tokenId = toBigInt(version) << 252n
 	tokenId = tokenId + (toBigInt(orderType.valueOf()) << 180n)
 	tokenId = tokenId + (toBigInt(operator) << 20n)

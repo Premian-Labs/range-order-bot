@@ -3,7 +3,7 @@ NOTE: Trade related settings may need to be tweaked from time to time depending 
 market conditions, and changes in available strikes/expirations
  */
 import { MarketParams } from '../types'
-import { wethAddress, wbtcAddress } from './constants'
+import { addresses } from './constants'
 
 /*
 These are the designates markets in which to provide liquidity for. Please note that it is
@@ -20,7 +20,7 @@ PREREQUISITE: there MUST be an IV oracle/surface for each market
 
 export const marketParams: MarketParams = {
 	WETH: {
-		address: wethAddress,
+		address: addresses.tokens.WETH,
 		maturities: ['27OCT23'],
 		callStrikes: [1500, 1600],
 		putStrikes: [1400, 1500],
@@ -28,13 +28,13 @@ export const marketParams: MarketParams = {
 		maxExposure: 1,
 	},
 	WBTC: {
-		address: wbtcAddress,
+		address: addresses.tokens.WBTC,
 		maturities: ['27OCT23'],
 		callStrikes: [27000, 28000],
 		putStrikes: [26000, 27000],
 		depositSize: 0.01,
 		maxExposure: 0.1,
-	}
+	},
 }
 
 /*
