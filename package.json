@@ -1,7 +1,7 @@
 {
   "name": "@premia/range-order-bot",
   "version": "0.1.0",
-  "description": "Market Making Premia V3 Pools",
+  "description": "Market Making Premia V3 Option Pools",
   "author": "research@premia.finance",
   "license": "MIT",
   "keywords": [
