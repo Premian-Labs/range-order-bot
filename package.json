@@ -1,38 +1,39 @@
 {
-  "name": "@premia/range-order-bot",
-  "version": "0.1.0",
-  "description": "Market Making Premia V3 Option Pools",
-  "author": "research@premia.finance",
-  "license": "MIT",
-  "keywords": [
-    "premia",
-    "v3",
-    "ethereum",
-    "defi",
-    "options",
-    "trading",
-    "market-making"
-  ],
-  "scripts": {
-    "build": "tsc --build",
-    "postinstall": "npx typechain --target ethers-v6 --out-dir \"./typechain\" \"./abi/*.json\"",
-    "prettier": "./node_modules/.bin/prettier --write --ignore-path .gitignore ./src/**",
-    "start": "npx ts-node src/index.ts"
-  },
-  "dependencies": {
-    "@types/lodash.isequal": "^4.5.6",
-    "@uqee/black-scholes": "^1.0.7",
-    "dotenv": "^16.3.1",
-    "ethers": "^6.8.0",
-    "lodash.isequal": "^4.5.0",
-    "moment": "^2.29.4",
-    "prettier": "^3.0.3",
-    "ts-node": "^10.9.1",
-    "typechain": "^8.3.2",
-    "typechain-target-ethers-v6": "^0.1.0",
-    "typescript": "^5.2.2"
-  },
-  "engines": {
-    "node": ">=14"
-  }
+	"name": "@premia/range-order-bot",
+	"version": "0.1.0",
+	"description": "Market Making Premia V3 Option Pools",
+	"author": "research@premia.finance",
+	"license": "MIT",
+	"keywords": [
+		"premia",
+		"v3",
+		"ethereum",
+		"defi",
+		"options",
+		"trading",
+		"market-making"
+	],
+	"scripts": {
+		"build": "tsc --build",
+		"postinstall": "npx typechain --target ethers-v6 --out-dir \"./typechain\" \"./node_modules/@premia/v3-abi/abi/*.json\"",
+		"prettier": "./node_modules/.bin/prettier --write --ignore-path .gitignore ./src/**",
+		"start": "npx ts-node src/index.ts"
+	},
+	"dependencies": {
+		"@premia/v3-abi": "^1.0.7",
+		"@types/lodash.isequal": "^4.5.6",
+		"@uqee/black-scholes": "^1.0.7",
+		"dotenv": "^16.3.1",
+		"ethers": "^6.8.0",
+		"lodash.isequal": "^4.5.0",
+		"moment": "^2.29.4",
+		"prettier": "^3.0.3",
+		"ts-node": "^10.9.1",
+		"typechain": "^8.3.2",
+		"typechain-target-ethers-v6": "^0.1.0",
+		"typescript": "^5.2.2"
+	},
+	"engines": {
+		"node": ">=14"
+	}
 }
