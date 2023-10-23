@@ -146,7 +146,7 @@ async function setApproval(
 		approvalBigInt = parseUnits(collateralValue.toString(), 18)
 	}
 	// Set approval
-	// TODO: what happens if this fails, we will fail downstream
+	// TODO: what happens if this fails, we will fail downstream -> kill bot
 	try {
 		await erc20.approve(addresses.core.ERC20Router.address, approvalBigInt)
 	} catch (e) {
@@ -155,6 +155,7 @@ async function setApproval(
 			await erc20.approve(addresses.core.ERC20Router.address, approvalBigInt)
 		} catch (e) {
 			console.log(`WARNING: was NOT able to approve ${market} collateral!`)
+			console.log(e)
 		}
 	}
 }
@@ -478,7 +479,7 @@ export async function processStrikes(
 		}
 		if (!isDeployed && autoDeploy) {
 			console.log(`Pool does not exist. Deploying pool now....`)
-			//TODO: what happens if we cant deploy (it will fail downstream)
+			//TODO: what happens if we cant deploy (it will fail downstream) -> skip option market
 
 			let deploymentTx: ContractTransactionResponse
 			let confirm: TransactionReceipt | null
