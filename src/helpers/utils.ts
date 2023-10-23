@@ -25,6 +25,8 @@ import {
 	Signer,
 	Wallet,
 	toBigInt,
+	ContractTransactionResponse,
+	TransactionReceipt,
 } from 'ethers'
 import {
 	lpAddress,
@@ -144,7 +146,17 @@ async function setApproval(
 		approvalBigInt = parseUnits(collateralValue.toString(), 18)
 	}
 	// Set approval
-	await erc20.approve(addresses.core.ERC20Router.address, approvalBigInt)
+	// TODO: what happens if this fails, we will fail downstream
+	try {
+		await erc20.approve(addresses.core.ERC20Router.address, approvalBigInt)
+	} catch (e) {
+		await delay(2000)
+		try {
+			await erc20.approve(addresses.core.ERC20Router.address, approvalBigInt)
+		} catch (e) {
+			console.log(`WARNING: was NOT able to approve ${market} collateral!`)
+		}
+	}
 }
 async function getCollateralApprovalAmt(
 	market: string,
@@ -252,27 +264,59 @@ async function depositRangeOrderLiq(
 		parseFloat(formatEther(depositSizeBigInt)),
 	)
 
-	const depositTx = await pool[
-		'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)'
-	](
-		posKey,
-		nearestBelow.nearestBelowLower,
-		nearestBelow.nearestBelowUpper,
-		depositSizeBigInt,
-		0n,
-		parseEther('1'),
-		{
-			gasLimit: 10000000, // Fails to properly estimate gas limit
-		},
-	)
-	const confirm = await provider.waitForTransaction(depositTx.hash, 1)
-	console.log('Confirmation status:', confirm?.status)
+	let depositTx: ContractTransactionResponse
+	let confirm: TransactionReceipt | null
+	try {
+		depositTx = await pool[
+			'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)'
+		](
+			posKey,
+			nearestBelow.nearestBelowLower,
+			nearestBelow.nearestBelowUpper,
+			depositSizeBigInt,
+			0n,
+			parseEther('1'),
+			{
+				gasLimit: 10000000, // Fails to properly estimate gas limit
+			},
+		)
+		confirm = await provider.waitForTransaction(depositTx.hash, 1)
+		console.log('Confirmation status:', confirm?.status)
+	} catch (e) {
+		await delay(2000)
+		try {
+			depositTx = await pool[
+				'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)'
+			](
+				posKey,
+				nearestBelow.nearestBelowLower,
+				nearestBelow.nearestBelowUpper,
+				depositSizeBigInt,
+				0n,
+				parseEther('1'),
+				{
+					gasLimit: 10000000, // Fails to properly estimate gas limit
+				},
+			)
+			confirm = await provider.waitForTransaction(depositTx.hash, 1)
+			console.log('Confirmation status:', confirm?.status)
+		} catch (e) {
+			console.log(`WARNING: Could NOT make a deposit!`)
+			console.log(e)
+			confirm = null
+		}
+	}
+
+	// NOTE: issues beyond a provider error are covered here.
 	if (confirm?.status == 0) {
 		console.log('Last Transaction Failed!')
 		console.log(confirm)
 		return lpRangeOrders
 	}
-	console.log('Deposit Confirmed!')
+	// Successful transaction
+	if (confirm?.status == 1) {
+		console.log('Deposit Confirmed!')
+	}
 
 	const serializedPosKey = {
 		owner: posKey.owner,
@@ -344,6 +388,10 @@ function getValidRangeWidth(
 	} else {
 		throw new Error('Wrong order type')
 	}
+}
+
+export async function delay(t: number) {
+	await new Promise((resolve) => setTimeout(resolve, t))
 }
 
 export async function processStrikes(
@@ -430,13 +478,36 @@ export async function processStrikes(
 		}
 		if (!isDeployed && autoDeploy) {
 			console.log(`Pool does not exist. Deploying pool now....`)
-			const deploymentTx = await poolFactory.deployPool(poolKey, {
-				value: parseEther(maxDeploymentFee), //init fee. excess refunded
-				gasLimit: 10000000, // Fails to properly estimate gas limit
-			})
+			//TODO: what happens if we cant deploy (it will fail downstream)
 
-			const confirm = await provider.waitForTransaction(deploymentTx.hash, 1)
+			let deploymentTx: ContractTransactionResponse
+			let confirm: TransactionReceipt | null
+			try {
+				deploymentTx = await poolFactory.deployPool(poolKey, {
+					value: parseEther(maxDeploymentFee), //init fee. excess refunded
+					gasLimit: 10000000, // Fails to properly estimate gas limit
+				})
+				confirm = await provider.waitForTransaction(deploymentTx.hash, 1)
+			} catch (e) {
+				await delay(2000)
+				try {
+					deploymentTx = await poolFactory.deployPool(poolKey, {
+						value: parseEther(maxDeploymentFee), //init fee. excess refunded
+						gasLimit: 10000000, // Fails to properly estimate gas limit
+					})
+					confirm = await provider.waitForTransaction(deploymentTx.hash, 1)
+				} catch (e) {
+					console.log(
+						`WARNING: failed to deploy pool for ${market} ${strike} ${
+							isCall ? 'Calls' : 'Puts'
+						} for ${maturityString} `,
+					)
+					console.log(e)
+					confirm = null
+				}
+			}
 
+			// NOTE: issues beyond a provider error are covered here
 			if (confirm?.status == 0) {
 				console.log(
 					`WARNING: pool was not deployed, skipping ${market} ${maturityString} ${
@@ -446,11 +517,15 @@ export async function processStrikes(
 				console.log(confirm)
 				continue
 			}
-			console.log(
-				`${market} ${maturityString} ${
-					isCall ? 'Call' : 'Put'
-				} pool deployment confirmed!`,
-			)
+
+			// Successful transaction
+			if (confirm?.status == 1) {
+				console.log(
+					`${market} ${maturityString} ${
+						isCall ? 'Call' : 'Put'
+					} pool deployment confirmed!`,
+				)
+			}
 		}
 
 		const pool = IPool__factory.connect(poolAddress, signer)
@@ -477,14 +552,41 @@ export async function processStrikes(
 			const annihilationSize = Math.min(longBalance, shortBalance)
 			console.log(`Annihilating ${annihilationSize} contracts..`)
 			const annihilationSizeBigInt = parseEther(annihilationSize.toString())
-			const annihilateTx = await pool.annihilate(annihilationSizeBigInt, {
-				gasLimit: 1400000,
-			})
-			const confirm = await provider.waitForTransaction(annihilateTx.hash, 1)
 
+			let annihilateTx: ContractTransactionResponse
+			let confirm: TransactionReceipt | null
+
+			try {
+				annihilateTx = await pool.annihilate(annihilationSizeBigInt, {
+					gasLimit: 1400000,
+				})
+				confirm = await provider.waitForTransaction(annihilateTx.hash, 1)
+			} catch (e) {
+				await delay(2000)
+				try {
+					annihilateTx = await pool.annihilate(annihilationSizeBigInt, {
+						gasLimit: 1400000,
+					})
+					confirm = await provider.waitForTransaction(annihilateTx.hash, 1)
+				} catch (e) {
+					console.log(
+						`WARNING: unable to annihilate ${market} ${strike} ${
+							isCall ? 'Calls' : 'Puts'
+						} for ${maturityString}`,
+					)
+					console.log(e)
+					confirm = null
+				}
+			}
+
+			// NOTE: issues beyond a provider error are covered here
 			if (confirm?.status == 0) {
 				console.log('WARNING: failed to annihilate existing positions!')
-			} else {
+			}
+
+			// Successful transaction
+			if (confirm?.status == 1) {
+				console.log(`Annihilation Successful!`)
 				// Update balances post annihilation
 				longBalance = parseFloat(
 					formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG)),

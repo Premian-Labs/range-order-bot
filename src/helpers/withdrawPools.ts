@@ -1,10 +1,17 @@
 import * as fs from 'fs'
 import moment from 'moment/moment'
-import { JsonRpcProvider, parseEther, Wallet, formatEther } from 'ethers'
+import {
+	JsonRpcProvider,
+	parseEther,
+	Wallet,
+	formatEther,
+	ContractTransactionResponse,
+	TransactionReceipt,
+} from 'ethers'
 import { IPool__factory } from '../../typechain'
 import { useRangeOrderBalance } from '../config/liquiditySettings'
 import { privateKey, rpcUrl, lpAddress } from '../config/constants'
-import { formatTokenId } from './utils'
+import { delay, formatTokenId } from './utils'
 import { PosKey, Position } from '../types'
 import isEqual from 'lodash.isequal'
 
@@ -89,47 +96,91 @@ export async function withdrawSettleLiquidity(
 		if (exp < ts) {
 			console.log(`Pool expired...settling position instead...`)
 
-			const settlePositionTx = await pool.settlePosition(posKey)
+			let settlePositionTx: ContractTransactionResponse
+			let confirm: TransactionReceipt | null
 
-			const confirm = await provider.waitForTransaction(
-				settlePositionTx.hash,
-				1,
-			)
+			try {
+				settlePositionTx = await pool.settlePosition(posKey)
 
+				confirm = await provider.waitForTransaction(settlePositionTx.hash, 1)
+			} catch (e) {
+				await delay(2000)
+				try {
+					settlePositionTx = await pool.settlePosition(posKey)
+
+					confirm = await provider.waitForTransaction(settlePositionTx.hash, 1)
+				} catch (e) {
+					console.log(`WARNING: unable to settle position`)
+					console.log(e)
+					confirm = null
+				}
+			}
+
+			// NOTE: issues beyond a provider error are covered here
 			if (confirm?.status == 0) {
 				console.log(`WARNING: No settlement of LP Range Order`)
 				console.log(confirm)
 				continue
 			}
 
-			console.log(`LP Range Order settlement confirmed!`)
-			// remove range order from array if settlement is successful
-			lpRangeOrders = lpRangeOrders.filter(
-				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
-			)
-			continue
+			// Successful transaction
+			if (confirm?.status == 1) {
+				console.log(`LP Range Order settlement confirmed!`)
+				// remove range order from array if settlement is successful
+				lpRangeOrders = lpRangeOrders.filter(
+					(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
+				)
+				continue
+			}
 		}
 
-		const withdrawTx = await pool.withdraw(
-			posKey,
-			parseEther(withdrawSize.toString()),
-			0,
-			parseEther('1'),
-			{ gasLimit: 1400000 },
-		)
+		let withdrawTx: ContractTransactionResponse
+		let confirm: TransactionReceipt | null
 
-		const confirm = await provider.waitForTransaction(withdrawTx.hash, 1)
+		try {
+			withdrawTx = await pool.withdraw(
+				posKey,
+				parseEther(withdrawSize.toString()),
+				0,
+				parseEther('1'),
+				{ gasLimit: 1400000 },
+			)
+			confirm = await provider.waitForTransaction(withdrawTx.hash, 1)
+		} catch (e) {
+			await delay(2000)
+			try {
+				withdrawTx = await pool.withdraw(
+					posKey,
+					parseEther(withdrawSize.toString()),
+					0,
+					parseEther('1'),
+					{ gasLimit: 1400000 },
+				)
+				confirm = await provider.waitForTransaction(withdrawTx.hash, 1)
+			} catch (e) {
+				console.log(`WARNING: unable to withdraw position!`)
+				console.log(e)
+				confirm = null
+			}
+		}
 
+		// NOTE: issues beyond a provider error are covered here
 		if (confirm?.status == 0) {
 			console.log(`WARNING: No withdraw of LP Range Order`)
 			console.log(confirm)
 			continue
 		}
-		// remove range order from array if withdraw is sucesseful
-		lpRangeOrders = lpRangeOrders.filter(
-			(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
-		)
-		console.log(`LP Range Order withdraw confirmed of size : ${withdrawSize}!`)
+
+		// Successful transaction
+		if (confirm?.status == 1) {
+			console.log(`Withdraw successful!`)
+			lpRangeOrders = lpRangeOrders.filter(
+				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
+			)
+			console.log(
+				`LP Range Order withdraw confirmed of size : ${withdrawSize}!`,
+			)
+		}
 	}
 	console.log(`Finished withdraw and/or settling of positions!`)
 	console.log(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
