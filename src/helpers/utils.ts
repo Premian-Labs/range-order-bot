@@ -22,7 +22,6 @@ import {
 	parseEther,
 	parseUnits,
 	formatUnits,
-	Signer,
 	Wallet,
 	toBigInt,
 	ContractTransactionResponse,
@@ -146,7 +145,6 @@ async function setApproval(
 		approvalBigInt = parseUnits(collateralValue.toString(), 18)
 	}
 	// Set approval
-	// TODO: what happens if this fails, we will fail downstream -> kill bot
 	try {
 		await erc20.approve(addresses.core.ERC20Router.address, approvalBigInt)
 	} catch (e) {
@@ -156,8 +154,10 @@ async function setApproval(
 		} catch (e) {
 			console.log(`WARNING: was NOT able to approve ${market} collateral!`)
 			console.log(e)
+			return false
 		}
 	}
+	return true
 }
 async function getCollateralApprovalAmt(
 	market: string,
@@ -196,7 +196,7 @@ async function getCollateralApprovalAmt(
 		return collateralValue
 	} else {
 		/*
-		NOTE: all other cases, we are  use options instead of collateral so the collateral
+		NOTE: all other cases, we use options instead of collateral so the collateral
 		amount to approve is zero
 		ie order type CS & isLeftSide -> short options being posted on LEFT side
 		*/
@@ -209,12 +209,8 @@ async function depositRangeOrderLiq(
 	strike: number,
 	maturity: string,
 	posKey: PosKey,
-	isLeftSide: boolean,
 	depositSize: number,
-	signer: Signer,
 	provider: JsonRpcProvider,
-	collateralTokenAddr: string,
-	collateralValue: number,
 	isCallPool: boolean,
 	lpRangeOrders: Position[],
 ) {
@@ -222,34 +218,11 @@ async function depositRangeOrderLiq(
 		throw new Error(`CSUP order types not supported: ${posKey.orderType}`)
 
 	const depositSizeBigInt = parseEther(depositSize.toString())
-	const erc20 = IERC20__factory.connect(collateralTokenAddr, signer)
 
 	const nearestBelow = await pool.getNearestTicksBelow(
 		posKey.lower,
 		posKey.upper,
 	)
-
-	/*
-	NOTE: below covers the cases in which we are doing a deposit, but it is with
-	collateral and not options. If it is with options, then we do not need any
-	approvals for options to be deposited.
-	*/
-
-	// LEFT SIDE: collateral deposit w/o approval
-	if (
-		posKey.orderType == OrderType.LC &&
-		isLeftSide &&
-		!maxCollateralApproved
-	) {
-		await setApproval(market, isCallPool, collateralValue, erc20)
-		// RIGHT SIDE: collateral deposit w/o approval
-	} else if (
-		posKey.orderType == OrderType.CS &&
-		!isLeftSide &&
-		!maxCollateralApproved
-	) {
-		await setApproval(market, isCallPool, collateralValue, erc20)
-	}
 
 	console.log(
 		'Deposit Params:',
@@ -479,7 +452,6 @@ export async function processStrikes(
 		}
 		if (!isDeployed && autoDeploy) {
 			console.log(`Pool does not exist. Deploying pool now....`)
-			//TODO: what happens if we cant deploy (it will fail downstream) -> skip option market
 
 			let deploymentTx: ContractTransactionResponse
 			let confirm: TransactionReceipt | null
@@ -501,10 +473,10 @@ export async function processStrikes(
 					console.log(
 						`WARNING: failed to deploy pool for ${market} ${strike} ${
 							isCall ? 'Calls' : 'Puts'
-						} for ${maturityString} `,
+						} for ${maturityString}. Skipping market. `,
 					)
 					console.log(e)
-					confirm = null
+					continue
 				}
 			}
 
@@ -642,7 +614,7 @@ export async function processStrikes(
 			orderType: rightOrderType,
 		}
 
-		// NOTE: if using options for a RIGHT side order, collateral amt is ZERO
+		// IMPORTANT NOTE: if using options for a RIGHT side order, collateral amt is ZERO
 		const rightSideCollateralAmt = await getCollateralApprovalAmt(
 			market,
 			rightPosKey,
@@ -725,7 +697,8 @@ export async function processStrikes(
 		=========================================================================================
 
 		NOTE: once the deposits are queued up, we need to do quality control checks to make sure that
-		we are not breaching any limits (ie max exposure or low account collateral balance)
+		we are not breaching any limits (ie max exposure or low account collateral balance) and that we
+		have the proper approvals needed.
 		*/
 
 		// collateral address (for both LEFT & RIGHT side orders)
@@ -735,7 +708,7 @@ export async function processStrikes(
 
 		const erc20 = IERC20__factory.connect(collateralTokenAddr, signer)
 
-		// find the appropriate collateral balance (formatted)
+		// find the appropriate collateral balance (formatted as human-readable)
 		let collateralBalance: number
 		if (market === 'WBTC' && isCall)
 			// WBTC is 8 decimals
@@ -762,11 +735,12 @@ export async function processStrikes(
 		// determine deposit capabilities
 		const sufficientCollateral =
 			collateralBalance >= rightSideCollateralAmt + leftSideCollateralAmt
+		// NOTE: if amt is ZERO it is because we are using options -> see getCollateralApprovalAmt()
 		const rightSideUsesOptions = rightSideCollateralAmt == 0
 		const leftSideUsesOptions = leftSideCollateralAmt == 0
 
-		// NOTE: we will still post single sided markets with options (close only quoting)
-		// If both orders require collateral and there is not enough for either: skip BOTH deposits
+		// If BOTH orders require collateral and there is not enough for either: skip BOTH deposits
+		// Otherwise we want to continue as we might have some options we are posting as deposit
 		if (
 			!sufficientCollateral &&
 			leftSideCollateralAmt > 0 &&
@@ -782,13 +756,44 @@ export async function processStrikes(
 			continue
 		}
 
+		// Process approvals for BOTH orders prior to making deposits
+		let collateralApproved: boolean
+		// Combine collateral amounts to make only 1 approval call (gas savings)
+		const totalApprovalAmt = leftSideCollateralAmt + rightSideCollateralAmt
+		// if we haven't set max approval, we will need to do this for each set of deposits
+		if (!maxCollateralApproved && totalApprovalAmt > 0) {
+			collateralApproved = await setApproval(
+				market,
+				isCall,
+				totalApprovalAmt,
+				erc20,
+			)
+		} else {
+			collateralApproved = true
+		}
+
+		// NOTE: we will still post single sided markets with options (close only quoting)
+		if (!collateralApproved) {
+			console.log(
+				`WARNING: Collateral approval failed for 
+				${market} 
+				${maturityString} 
+				${strike} 
+				${isCall ? 'Call' : 'Put'}`,
+			)
+			console.log(`Will process option only deposits if available..`)
+		}
+
 		// check to see if we have breached our position limit for RIGHT SIDE orders
 		if (shortBalance >= marketParams[market].maxExposure) {
 			console.log(
 				'WARNING: max SHORT exposure reached, no RIGHT SIDE order placed..',
 			)
-			// if we are posting options only or have sufficient collateral do deposit: process
-		} else if (rightSideUsesOptions || sufficientCollateral) {
+			// if we are posting options only or have sufficient collateral (approved) do deposit: process
+		} else if (
+			rightSideUsesOptions ||
+			(sufficientCollateral && collateralApproved)
+		) {
 			// RIGHT SIDE ORDER
 			lpRangeOrders = await depositRangeOrderLiq(
 				market,
@@ -796,12 +801,8 @@ export async function processStrikes(
 				strike,
 				maturityString,
 				rightPosKey,
-				false,
 				marketParams[market].depositSize,
-				signer,
 				provider,
-				collateralTokenAddr,
-				rightSideCollateralAmt,
 				isCall,
 				lpRangeOrders,
 			)
@@ -819,20 +820,19 @@ export async function processStrikes(
 					isCall ? 'Calls' : 'Puts'
 				}`,
 			)
-			// if we are posting options only or have sufficient collateral do deposit: process
-		} else if (leftSideUsesOptions || sufficientCollateral) {
+			// if we are posting options only or have sufficient collateral (approved) do deposit: process
+		} else if (
+			leftSideUsesOptions ||
+			(sufficientCollateral && collateralApproved)
+		) {
 			lpRangeOrders = await depositRangeOrderLiq(
 				market,
 				pool,
 				strike,
 				maturityString,
 				leftPosKey,
-				true,
 				marketParams[market].depositSize,
-				signer,
 				provider,
-				collateralTokenAddr,
-				leftSideCollateralAmt,
 				isCall,
 				lpRangeOrders,
 			)

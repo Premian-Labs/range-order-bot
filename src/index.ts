@@ -84,7 +84,6 @@ async function runRangeOrderBot() {
 
 				// Successful transaction
 				console.log(`${market} approval set to MAX`)
-
 			}
 
 			// Approval for quote token
