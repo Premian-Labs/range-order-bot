@@ -102,13 +102,13 @@ export async function withdrawSettleLiquidity(
 			try {
 				settlePositionTx = await pool.settlePosition(posKey)
 
-				confirm = await provider.waitForTransaction(settlePositionTx.hash, 1)
+				confirm = await settlePositionTx.wait(1)
 			} catch (e) {
 				await delay(2000)
 				try {
 					settlePositionTx = await pool.settlePosition(posKey)
 
-					confirm = await provider.waitForTransaction(settlePositionTx.hash, 1)
+					confirm = await settlePositionTx.wait(1)
 				} catch (e) {
 					console.log(`WARNING: unable to settle position`)
 					console.log(e)
@@ -145,7 +145,7 @@ export async function withdrawSettleLiquidity(
 				parseEther('1'),
 				{ gasLimit: 1400000 },
 			)
-			confirm = await provider.waitForTransaction(withdrawTx.hash, 1)
+			confirm = await withdrawTx.wait(1)
 		} catch (e) {
 			await delay(2000)
 			try {
@@ -156,7 +156,7 @@ export async function withdrawSettleLiquidity(
 					parseEther('1'),
 					{ gasLimit: 1400000 },
 				)
-				confirm = await provider.waitForTransaction(withdrawTx.hash, 1)
+				confirm = await withdrawTx.wait(1)
 			} catch (e) {
 				console.log(`WARNING: unable to withdraw position!`)
 				console.log(e)

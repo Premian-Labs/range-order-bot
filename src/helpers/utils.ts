@@ -254,7 +254,7 @@ async function depositRangeOrderLiq(
 				gasLimit: 10000000, // Fails to properly estimate gas limit
 			},
 		)
-		confirm = await provider.waitForTransaction(depositTx.hash, 1)
+		confirm = await depositTx.wait(1)
 		console.log('Confirmation status:', confirm?.status)
 	} catch (e) {
 		await delay(2000)
@@ -272,7 +272,7 @@ async function depositRangeOrderLiq(
 					gasLimit: 10000000, // Fails to properly estimate gas limit
 				},
 			)
-			confirm = await provider.waitForTransaction(depositTx.hash, 1)
+			confirm = await depositTx.wait(1)
 			console.log('Confirmation status:', confirm?.status)
 		} catch (e) {
 			console.log(`WARNING: Could NOT make a deposit!`)
@@ -460,7 +460,7 @@ export async function processStrikes(
 					value: parseEther(maxDeploymentFee), //init fee. excess refunded
 					gasLimit: 10000000, // Fails to properly estimate gas limit
 				})
-				confirm = await provider.waitForTransaction(deploymentTx.hash, 1)
+				confirm = await deploymentTx.wait(1)
 			} catch (e) {
 				await delay(2000)
 				try {
@@ -468,7 +468,7 @@ export async function processStrikes(
 						value: parseEther(maxDeploymentFee), //init fee. excess refunded
 						gasLimit: 10000000, // Fails to properly estimate gas limit
 					})
-					confirm = await provider.waitForTransaction(deploymentTx.hash, 1)
+					confirm = await deploymentTx.wait(1)
 				} catch (e) {
 					console.log(
 						`WARNING: failed to deploy pool for ${market} ${strike} ${
@@ -533,14 +533,14 @@ export async function processStrikes(
 				annihilateTx = await pool.annihilate(annihilationSizeBigInt, {
 					gasLimit: 1400000,
 				})
-				confirm = await provider.waitForTransaction(annihilateTx.hash, 1)
+				confirm = await annihilateTx.wait(1)
 			} catch (e) {
 				await delay(2000)
 				try {
 					annihilateTx = await pool.annihilate(annihilationSizeBigInt, {
 						gasLimit: 1400000,
 					})
-					confirm = await provider.waitForTransaction(annihilateTx.hash, 1)
+					confirm = await annihilateTx.wait(1)
 				} catch (e) {
 					console.log(
 						`WARNING: unable to annihilate ${market} ${strike} ${

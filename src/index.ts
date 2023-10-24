@@ -54,22 +54,22 @@ async function runRangeOrderBot() {
 					signer,
 				)
 
-				let response: ContractTransactionResponse
+				let approveTX: ContractTransactionResponse
 				let confirm: TransactionReceipt | null
 				try {
-					response = await erc20.approve(
+					approveTX = await erc20.approve(
 						addresses.core.ERC20Router.address,
 						MaxUint256.toString(),
 					)
-					confirm = await provider.waitForTransaction(response.hash, 1)
+					confirm = await approveTX.wait(1)
 				} catch (e) {
 					await delay(2000)
 					try {
-						response = await erc20.approve(
+						approveTX = await erc20.approve(
 							addresses.core.ERC20Router.address,
 							MaxUint256.toString(),
 						)
-						confirm = await provider.waitForTransaction(response.hash, 1)
+						confirm = await approveTX.wait(1)
 					} catch (e) {
 						throw new Error(`Max approval could NOT be set for ${market}!`)
 					}
@@ -89,22 +89,22 @@ async function runRangeOrderBot() {
 			// Approval for quote token
 			const erc20 = IERC20__factory.connect(addresses.tokens.USDC, signer)
 
-			let response: ContractTransactionResponse
+			let approveTX: ContractTransactionResponse
 			let confirm: TransactionReceipt | null
 			try {
-				response = await erc20.approve(
+				approveTX = await erc20.approve(
 					addresses.core.ERC20Router.address,
 					MaxUint256.toString(),
 				)
-				confirm = await provider.waitForTransaction(response.hash, 1)
+				confirm = await approveTX.wait(1)
 			} catch (e) {
 				await delay(2000)
 				try {
-					response = await erc20.approve(
+					approveTX = await erc20.approve(
 						addresses.core.ERC20Router.address,
 						MaxUint256.toString(),
 					)
-					confirm = await provider.waitForTransaction(response.hash, 1)
+					confirm = await approveTX.wait(1)
 				} catch (e) {
 					throw new Error(`Approval could not be set for USDC!`)
 				}
