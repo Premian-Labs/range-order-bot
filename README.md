@@ -25,11 +25,10 @@ There are a couple of things that are needed in order to work with the range ord
 
 ## Setup
 1. Clone the repository on a local computer.
-2. Run `./abi.sh` in the command line within the directory (this should generate an `abi` folder in the root directory).
-3. While in the root directory, run `yarn install` to install package dependencies (this will also generate a 
+2. While in the root directory, run `yarn install` to install package dependencies (this will also generate a 
    `typechain` folder).
-4. Create a `.env` file using the same format at the example and add necessary information. Note that ENV should 
+3. Create a `.env` file using the same format at the example and add necessary information. Note that ENV should 
    either be `development` or `production`.  
-5. Navigate to `src/config/liquiditySettings.ts` and review each and ever setting.  Instructions & descriptions of 
+4. Navigate to `src/config/liquiditySettings.ts` and review each and ever setting.  Instructions & descriptions of 
    settings are provided in the file. 
-6. Run `yarn start` in the command line to run the range order bot.
+5. Run `yarn start` in the command line to run the range order bot.
