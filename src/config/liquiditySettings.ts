@@ -18,6 +18,7 @@ PREREQUISITE: there MUST be an IV oracle/surface for each market
 
  */
 
+//TODO: refactor out token addr into constants (not really a setting)
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,
