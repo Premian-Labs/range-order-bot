@@ -24,10 +24,10 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 
 | Token Symbol  | Arbitrum Goerli (Development) | Arbitrum (Production)  |
 |:-------------:|:-----------------------------:|:----------------------:|
-|     WETH      |               X               |           X            |
-|     WBTC      |               X               |           X            |
+|     WETH      |      :heavy_check_mark:       |           X            |
+|     WBTC      |      :heavy_check_mark:       |           X            |
 |      ARB      |                               |           X            | 
-|     LINK      |               X               |           X            |
+|     LINK      |      :heavy_check_mark:       |           X            |
 |    wstETH     |                               |           X            |
 |      GMX      |                               |           X            |
 |     MAGIC     |                               |           X            |
@@ -39,6 +39,7 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
   orders as time passes, minimizing the need for active management of orders. It is highly recommended that a user 
   is familiar with how range orders work, and the risks associated with owning option positions.  
 
+:heavy_check_mark:
 
 ## Quick Start
 1. Clone the repository on a local computer.
