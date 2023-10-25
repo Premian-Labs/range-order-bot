@@ -8,6 +8,12 @@ The protocol is designed to provide a set of smart contracts that advance open f
 self-custody, automatic execution without a trusted intermediary, and permission-less use of financial primitives.
 Additional information about the protocol can be found [here](https://docs.premia.blue/) on our website.
 
+## Premia Range Order Bot
+The range order bot is a market making script that allows users to quote two-sided markets (using concentrated
+liquidity) for whatever option markets that are preDefined within the settings. It will automatically update range
+orders as time passes, minimizing the need for active management of orders. It is highly recommended that a user
+is familiar with how range orders work, and the risks associated with owning option positions.
+
 ## PreRequisites
 There are a couple of things that are needed in order to work with the range order bot locally.  They include:
 - An EOA (Externally Owned Account) on Ethereum (funded on _Arbitrum_) with a wallet provider such as [Metamask](https://metamask.io/)
@@ -31,15 +37,6 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 |    wstETH     |                               |           :heavy_check_mark:           |
 |      GMX      |                               |           :heavy_check_mark:           |
 |     MAGIC     |                               |           :heavy_check_mark:           |
-
-
-## Premia Range Order Bot
-  The range order bot is a market making script that allows users to quote two-sided markets (using concentrated 
-  liquidity) for whatever option markets that are preDefined within the settings. It will automatically update range 
-  orders as time passes, minimizing the need for active management of orders. It is highly recommended that a user 
-  is familiar with how range orders work, and the risks associated with owning option positions.  
-
-:heavy_check_mark:
 
 ## Quick Start
 1. Clone the repository on a local computer.
