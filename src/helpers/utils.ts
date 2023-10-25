@@ -531,14 +531,14 @@ export async function processStrikes(
 
 			try {
 				annihilateTx = await pool.annihilate(annihilationSizeBigInt, {
-					gasLimit: 1400000,
+					gasLimit: 10000000,
 				})
 				confirm = await annihilateTx.wait(1)
 			} catch (e) {
 				await delay(2000)
 				try {
 					annihilateTx = await pool.annihilate(annihilationSizeBigInt, {
-						gasLimit: 1400000,
+						gasLimit: 10000000,
 					})
 					confirm = await annihilateTx.wait(1)
 				} catch (e) {

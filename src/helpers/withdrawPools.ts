@@ -143,7 +143,7 @@ export async function withdrawSettleLiquidity(
 				parseEther(withdrawSize.toString()),
 				0,
 				parseEther('1'),
-				{ gasLimit: 1400000 },
+				{ gasLimit: 10000000 },
 			)
 			confirm = await withdrawTx.wait(1)
 		} catch (e) {
@@ -154,7 +154,7 @@ export async function withdrawSettleLiquidity(
 					parseEther(withdrawSize.toString()),
 					0,
 					parseEther('1'),
-					{ gasLimit: 1400000 },
+					{ gasLimit: 10000000 },
 				)
 				confirm = await withdrawTx.wait(1)
 			} catch (e) {

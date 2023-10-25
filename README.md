@@ -59,3 +59,4 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 - [ ] convert timeThresholdMin into hours
 - [ ] refactor base token address out of marketParams (not a trade setting)
 - [ ] ignore liquidity settings to avoid loss of trade setting on repo updates
+- [ ] add check to ensure total LP range orders are not duped
