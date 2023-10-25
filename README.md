@@ -22,15 +22,15 @@ automatically paired with USDC (ie WETH/USDC). Please make sure to have sufficie
 base token (ie WETH) is used for call collateral, and the quote token (ie USDC) is used for put collateral. 
 
 
-| Token Symbol  | Arbitrum Goerli (Development) | Arbitrum (Production)  |
-|:-------------:|:-----------------------------:|:----------------------:|
-|     WETH      |      :heavy_check_mark:       |           X            |
-|     WBTC      |      :heavy_check_mark:       |           X            |
-|      ARB      |                               |           X            | 
-|     LINK      |      :heavy_check_mark:       |           X            |
-|    wstETH     |                               |           X            |
-|      GMX      |                               |           X            |
-|     MAGIC     |                               |           X            |
+| Token Symbol  | Arbitrum Goerli (Development) |         Arbitrum (Production)          |
+|:-------------:|:-----------------------------:|:--------------------------------------:|
+|     WETH      |      :heavy_check_mark:       |           :heavy_check_mark:           |
+|     WBTC      |      :heavy_check_mark:       |           :heavy_check_mark:           |
+|      ARB      |                               |           :heavy_check_mark:           | 
+|     LINK      |      :heavy_check_mark:       |           :heavy_check_mark:           |
+|    wstETH     |                               |           :heavy_check_mark:           |
+|      GMX      |                               |           :heavy_check_mark:           |
+|     MAGIC     |                               |           :heavy_check_mark:           |
 
 
 ## Premia Range Order Bot
