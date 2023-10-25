@@ -16,7 +16,7 @@ There are a couple of things that are needed in order to work with the range ord
 - A solid understanding of range orders and how concentrated liquidity works on Premia v3. If you have not done so 
   please see our docs on [Range Orders](https://docs.premia)
 
-## Pairs
+## Supported Pairs
 The range order bot depends on IV Oracles in order to price markets correctly on chain.  All tokens are 
 automatically paired with USDC (ie WETH/USDC). Please make sure to have sufficient capital in _both_ tokens as the 
 base token (ie WETH) is used for call collateral, and the quote token (ie USDC) is used for put collateral. 
