@@ -18,7 +18,6 @@ PREREQUISITE: there MUST be an IV oracle/surface for each market
 
  */
 
-//TODO: refactor out token addr into constants (not really a setting)
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,
@@ -107,7 +106,7 @@ happen when spot fails to exceed the spotMoveThreshold, but we still need to upd
 for time decay.
 NOTE: optimal range is likely 360 <-> 1440 min (6 <-> 24 hrs)
  */
-export const timeThresholdMin = 30 // expressed in minutes
+export const timeThresholdMin = 360 // expressed in minutes
 
 /*
 If set to true, when the bot initialized it will search for existing LP range orders

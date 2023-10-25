@@ -10,20 +10,37 @@ Additional information about the protocol can be found [here](https://docs.premi
 
 ## PreRequisites
 There are a couple of things that are needed in order to work with the range order bot locally.  They include:
-- An EOA (Externally Owned Account) on Ethereum (funded on Arbitrum) with a wallet provider such as [Metamask](https://metamask.io/)
+- An EOA (Externally Owned Account) on Ethereum (funded on _Arbitrum_) with a wallet provider such as [Metamask](https://metamask.io/)
 - The repository is written in Typescript and thus requires [Node](https://nodejs.org/en/download) to be installed
 - An API Key from [Infura](https://www.infura.io/)
-- An understanding of range orders and how concentrated liquidity works on Premia v3. If you have not done so please 
-  see our docs on [Range Orders](https://docs.premia)
+- A solid understanding of range orders and how concentrated liquidity works on Premia v3. If you have not done so 
+  please see our docs on [Range Orders](https://docs.premia)
+
+## Pairs
+The range order bot depends on IV Oracles in order to price markets correctly on chain.  All tokens are 
+automatically paired with USDC (ie WETH/USDC). Please make sure to have sufficient capital in _both_ tokens as the 
+base token (ie WETH) is used for call collateral, and the quote token (ie USDC) is used for put collateral. 
+
+
+| Token Symbol  | Arbitrum Goerli (Development) | Arbitrum (Production)  |
+|:-------------:|:-----------------------------:|:----------------------:|
+|     WETH      |               X               |           X            |
+|     WBTC      |               X               |           X            |
+|      ARB      |                               |           X            | 
+|     LINK      |               X               |           X            |
+|    wstETH     |                               |           X            |
+|      GMX      |                               |           X            |
+|     MAGIC     |                               |           X            |
+
 
 ## Premia Range Order Bot
   The range order bot is a market making script that allows users to quote two-sided markets (using concentrated 
   liquidity) for whatever option markets that are preDefined within the settings. It will automatically update range 
   orders as time passes, minimizing the need for active management of orders. It is highly recommended that a user 
   is familiar with how range orders work, and the risks associated with owning option positions.  
-  
 
-## Setup
+
+## Quick Start
 1. Clone the repository on a local computer.
 2. While in the root directory, run `yarn install` to install package dependencies (this will also generate a 
    `typechain` folder).
@@ -32,3 +49,11 @@ There are a couple of things that are needed in order to work with the range ord
 4. Navigate to `src/config/liquiditySettings.ts` and review each and ever setting.  Instructions & descriptions of 
    settings are provided in the file. 
 5. Run `yarn start` in the command line to run the range order bot.
+
+
+## Improvement List & Changelog
+- [ ] make position json files for both development and production
+- [x] add list of available pairs for trading in read me
+- [ ] make minOptionPrice per market for better granular control
+- [ ] convert timeThresholdMin into hours
+- [ ] refactor base token address out of marketParams (not a trade setting)
