@@ -1,6 +1,6 @@
-<p align="center">
+<div align="center">
   <img src="img/premia.png" alt=''>
-</p>
+</div>
 
 ## What is Premia?
 Premia is a peer-to-peer options exchange and settlement engine built for the Ethereum Virtual Machine (EVM).
