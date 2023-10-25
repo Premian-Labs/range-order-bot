@@ -18,10 +18,11 @@ PREREQUISITE: there MUST be an IV oracle/surface for each market
 
  */
 
+//TODO: refactor out token addr into constants (not really a setting)
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,
-		maturities: ['27OCT23'],
+		maturities: ['10NOV23'],
 		callStrikes: [1500, 1600],
 		putStrikes: [1400, 1500],
 		depositSize: 0.1,
@@ -29,7 +30,7 @@ export const marketParams: MarketParams = {
 	},
 	WBTC: {
 		address: addresses.tokens.WBTC,
-		maturities: ['27OCT23'],
+		maturities: ['10NOV23'],
 		callStrikes: [27000, 28000],
 		putStrikes: [26000, 27000],
 		depositSize: 0.01,
@@ -41,8 +42,8 @@ export const marketParams: MarketParams = {
 If an option markets delta goes outside the min/max range it will automatically be excluded from
 new liquidity deployment (this overrides the markets set in marketParams)
  */
-export const minDelta = 0.15 // .15 recommended
-export const maxDelta = 0.6 // .6 recommended
+export const minDelta = 0.01 // .15 recommended
+export const maxDelta = 0.99 // .6 recommended
 
 /*
 If an option market falls below this threshold, it will automatically be excluded from new
@@ -57,7 +58,7 @@ ahead of time (set to max uint256) to avoid approvals on each deposit.
 
 WARNING: This script does NOT remove max approval
  */
-export const maxCollateralApproved = false
+export const maxCollateralApproved = true
 
 /*
   NOTE: this will determine the width of the range order
