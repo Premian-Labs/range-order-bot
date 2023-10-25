@@ -27,7 +27,7 @@ The range order bot depends on IV Oracles in order to price markets correctly on
 automatically paired with USDC (ie WETH/USDC). Please make sure to have sufficient capital in _both_ tokens as the 
 base token (ie WETH) is used for call collateral, and the quote token (ie USDC) is used for put collateral. 
 
-<p align="center">
+<div align="center">
 
 | Token Symbol  | Arbitrum Goerli (Development) |         Arbitrum (Production)          |
 |:-------------:|:-----------------------------:|:--------------------------------------:|
@@ -39,7 +39,7 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 |      GMX      |                               |           :heavy_check_mark:           |
 |     MAGIC     |                               |           :heavy_check_mark:           |
 
-</p>
+</div>
 
 ## Quick Start
 1. Clone the repository on a local computer.
