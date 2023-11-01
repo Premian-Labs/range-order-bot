@@ -203,6 +203,8 @@ async function getCollateralApprovalAmt(
 		return 0
 	}
 }
+
+// TODO: remove provider (not needed)
 async function depositRangeOrderLiq(
 	market: string,
 	pool: IPool,

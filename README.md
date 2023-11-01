@@ -60,3 +60,4 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 - [ ] refactor base token address out of marketParams (not a trade setting)
 - [ ] ignore liquidity settings to avoid loss of trade setting on repo updates
 - [ ] add check to ensure total LP range orders are not duped
+- [ ] write to position json after each deposit instead of at the end of cycle
