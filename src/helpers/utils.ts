@@ -413,7 +413,7 @@ export async function processStrikes(
 		}
 
 		const ts = moment.utc().unix()
-		const ttm = (maturityTimestamp - ts) / SECONDSINYEAR
+		const ttm = Math.round((maturityTimestamp - ts) / SECONDSINYEAR * 100000) / 100000
 
 		const iv = await ivOracle['getVolatility(address,uint256,uint256,uint256)'](
 			productionTokenAddr[market], //NOTE: we use production addresses only
