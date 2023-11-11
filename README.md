@@ -52,3 +52,11 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 4. Navigate to `src/config/liquiditySettings.ts` and review each and ever setting.  Instructions & descriptions of 
    settings are provided in the file. 
 5. Run `yarn start` in the command line to run the range order bot.
+
+
+## Improvement List & Changelog
+- [ ] make minOptionPrice per market for better granular control
+- [ ] convert timeThresholdMin into hours
+- [ ] refactor base token address out of marketParams (not a trade setting)
+- [ ] ignore liquidity settings to avoid loss of trade setting on repo updates
+- [ ] add check to ensure total LP range orders are not duped
