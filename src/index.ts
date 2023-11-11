@@ -1,6 +1,13 @@
 import { withdrawSettleLiquidity } from './helpers/withdrawPools'
 import { deployLiquidity } from './helpers/hydratePools'
-import { formatEther, JsonRpcProvider, Wallet, MaxUint256 } from 'ethers'
+import {
+	formatEther,
+	JsonRpcProvider,
+	Wallet,
+	MaxUint256,
+	ContractTransactionResponse,
+	TransactionReceipt,
+} from 'ethers'
 import moment from 'moment/moment'
 import {
 	marketParams,
@@ -10,6 +17,7 @@ import {
 	withdrawExistingPositions,
 	maxCollateralApproved,
 } from './config/liquiditySettings'
+import { delay } from './helpers/utils'
 import { privateKey, rpcUrl, addresses } from './config/constants'
 import { IChainlinkAdapter__factory, IERC20__factory } from '../typechain'
 import { Position } from './types'
@@ -45,31 +53,70 @@ async function runRangeOrderBot() {
 					marketParams[market].address,
 					signer,
 				)
-				const response = await erc20.approve(
-					addresses.core.ERC20Router.address,
-					MaxUint256.toString(),
-				)
-				const confirm = await provider.waitForTransaction(response.hash, 1)
+
+				let approveTX: ContractTransactionResponse
+				let confirm: TransactionReceipt | null
+				try {
+					approveTX = await erc20.approve(
+						addresses.core.ERC20Router.address,
+						MaxUint256.toString(),
+					)
+					confirm = await approveTX.wait(1)
+				} catch (e) {
+					await delay(2000)
+					try {
+						approveTX = await erc20.approve(
+							addresses.core.ERC20Router.address,
+							MaxUint256.toString(),
+						)
+						confirm = await approveTX.wait(1)
+					} catch (e) {
+						throw new Error(`Max approval could NOT be set for ${market}!`)
+					}
+				}
+
+				// NOTE: issues beyond a provider error are covered here
 				if (confirm?.status == 0) {
 					throw new Error(
 						`Max approval NOT set for ${market}! Try again or check provider or ETH balance...`,
 					)
 				}
+
+				// Successful transaction
 				console.log(`${market} approval set to MAX`)
 			}
 
 			// Approval for quote token
 			const erc20 = IERC20__factory.connect(addresses.tokens.USDC, signer)
-			const response = await erc20.approve(
-				addresses.core.ERC20Router.address,
-				MaxUint256.toString(),
-			)
-			const confirm = await provider.waitForTransaction(response.hash, 1)
+
+			let approveTX: ContractTransactionResponse
+			let confirm: TransactionReceipt | null
+			try {
+				approveTX = await erc20.approve(
+					addresses.core.ERC20Router.address,
+					MaxUint256.toString(),
+				)
+				confirm = await approveTX.wait(1)
+			} catch (e) {
+				await delay(2000)
+				try {
+					approveTX = await erc20.approve(
+						addresses.core.ERC20Router.address,
+						MaxUint256.toString(),
+					)
+					confirm = await approveTX.wait(1)
+				} catch (e) {
+					throw new Error(`Approval could not be set for USDC!`)
+				}
+			}
+
 			if (confirm?.status == 0) {
 				throw new Error(
 					`Max approval NOT set for USDC! Try again or check provider or ETH balance...`,
 				)
 			}
+
+			// Successful transaction
 			console.log(`USDC approval set to MAX`)
 		}
 		initialized = true
@@ -78,7 +125,7 @@ async function runRangeOrderBot() {
 	// iterate through each market to determine is liquidity needs to be deployed/updated
 	for (const market of Object.keys(marketParams)) {
 		/*
-    INITALIZATION CASE: if we have no reference price established for a given market then this is the initial run,
+    INITIALIZATION CASE: if we have no reference price established for a given market then this is the initial run,
     so we must get price & ts and deploy all orders
     */
 		if (!marketParams[market].spotPrice) {
@@ -106,14 +153,14 @@ async function runRangeOrderBot() {
 			)
 		} else {
 			/*
-      MAINTENANCE CASE: if we have a reference price we need to check it against current values and update
-      markets accordingly
-      */
+			  MAINTENANCE CASE: if we have a reference price we need to check it against current values and update
+			  markets accordingly
+			  */
 
 			// get current values
 			let ts = moment.utc().unix() // second
 
-			// attempt to get curent price (retry if error, and skip on failure)
+			// attempt to get current price (retry if error, and skip on failure)
 			let curPrice: number
 			try {
 				curPrice = parseFloat(
@@ -136,7 +183,7 @@ async function runRangeOrderBot() {
 						),
 					)
 				} catch (e) {
-					console.log(`WARNIING: failed to get current price for ${market}`)
+					console.log(`WARNING: failed to get current price for ${market}`)
 					console.log(`If issue persists, please check node provider`)
 					continue
 				}
@@ -156,7 +203,7 @@ async function runRangeOrderBot() {
 			let pastTimeThresh = ts - timeThresholdMin * 60 > marketParams[market].ts!
 			// force update if a threshold is reached
 			if (abovePriceThresh || belowPriceThresh || pastTimeThresh) {
-				console.log('Threshoold trigger reached. Updating orders...')
+				console.log('Threshold trigger reached. Updating orders...')
 				if (abovePriceThresh) console.log(`Above Price Threshold`)
 				if (belowPriceThresh) console.log(`Below Price Threshold`)
 				if (pastTimeThresh) console.log(`Time Threshold`)
@@ -178,15 +225,11 @@ async function runRangeOrderBot() {
 	}
 }
 
-async function delay(t: number) {
-	await new Promise((resolve) => setTimeout(resolve, t))
-}
-
 async function main() {
 	while (true) {
 		await runRangeOrderBot()
 		console.log('waiting....')
-		await delay(refreshRate * 60 * 1000) // min -> milsec
+		await delay(refreshRate * 60 * 1000) // min -> mil
 	}
 }
 
