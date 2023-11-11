@@ -1,5 +1,5 @@
 import moment from 'moment'
-import { formatEther, MaxUint256 } from 'ethers'
+import { MaxUint256 } from 'ethers'
 import { withdrawSettleLiquidity } from './actions/withdrawPools'
 import {
 	marketParams,
@@ -14,21 +14,16 @@ import { Position } from './types'
 import { getExistingPositions } from './actions/getPositions'
 import { deployLiquidity } from './actions/hydratePools'
 import { getCurrentTimestamp } from './utils/dates'
-import { chainlink, premia, provider } from './contracts'
+import { premia } from './contracts'
 import { log } from './utils/logs'
+import { delay } from './utils/time'
+import { getSpotPrice } from './utils/prices'
+import { setApproval } from './utils/tokens'
 
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)
 
-	// get & set spot price
-	marketParams[market].spotPrice = parseFloat(
-		formatEther(
-			await chainlink.getPrice(
-				marketParams[market].address,
-				addresses.tokens.USDC,
-			),
-		),
-	)
+	marketParams[market].spotPrice = await getSpotPrice(market)
 	marketParams[market].ts = getCurrentTimestamp()
 
 	lpRangeOrders = await getExistingPositions(
@@ -40,7 +35,6 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
 	}
 
-	// deploy liquidity in given market using marketParam settings
 	lpRangeOrders = await deployLiquidity(
 		lpRangeOrders,
 		market,
@@ -53,38 +47,13 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 async function maintainPositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Running position maintenance process for ${market}`)
 
-	const ts = getCurrentTimestamp() // second
+	const ts = getCurrentTimestamp() // seconds
 
 	// attempt to get curent price (retry if error, and skip on failure)
-	let curPrice: number
-	try {
-		curPrice = parseFloat(
-			formatEther(
-				await chainlink.getPrice(
-					marketParams[market].address,
-					addresses.tokens.USDC,
-				),
-			),
-		)
-	} catch (e) {
-		await delay(5000)
+	const curPrice = await getSpotPrice(market)
 
-		try {
-			curPrice = parseFloat(
-				formatEther(
-					await chainlink.getPrice(
-						marketParams[market].address,
-						addresses.tokens.USDC,
-					),
-				),
-			)
-		} catch (e) {
-			log.warning(
-				`Failed to get current price for ${market}. \n
-				If issue persists, please check node provider`,
-			)
-			return lpRangeOrders
-		}
+	if (!curPrice) {
+		return lpRangeOrders
 	}
 
 	log.info(
@@ -164,12 +133,9 @@ async function runRangeOrderBot() {
 					premia.signer as any,
 				)
 
-				const response = await token.approve(
-					addresses.core.ERC20Router.address,
-					MaxUint256.toString(),
-				)
+				const approveTX = await setApproval(Number(MaxUint256), token)
+				const confirm = await approveTX.wait(1)
 
-				const confirm = await provider.waitForTransaction(response.hash, 1)
 				if (confirm?.status == 0) {
 					throw new Error(
 						`Max approval NOT set for ${market}! Try again or check provider or ETH balance...`,
@@ -185,12 +151,12 @@ async function runRangeOrderBot() {
 				premia.signer as any,
 			)
 
-			const response = await token.approve(
+			const approveTX = await token.approve(
 				addresses.core.ERC20Router.address,
 				MaxUint256.toString(),
 			)
+			const confirm = await approveTX.wait(1)
 
-			const confirm = await provider.waitForTransaction(response.hash, 1)
 			if (confirm?.status == 0) {
 				throw new Error(
 					`Max approval NOT set for USDC! Try again or check provider or ETH balance...`,
@@ -207,10 +173,6 @@ async function runRangeOrderBot() {
 	for (const market of Object.keys(marketParams)) {
 		lpRangeOrders = await updateMarket(lpRangeOrders, market)
 	}
-}
-
-async function delay(t: number) {
-	return new Promise((resolve) => setTimeout(resolve, t))
 }
 
 async function main() {

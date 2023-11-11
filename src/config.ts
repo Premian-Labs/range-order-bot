@@ -25,10 +25,7 @@ export const logLevel: LogLevel = 'INFO'
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,
-		maturities: [
-			'17NOV23',
-			'24NOV23',
-		],
+		maturities: ['17NOV23', '24NOV23'],
 		// callStrikes: [/*1500,*/ 1600, 1700, 1800 /*, 1900*/],
 		// putStrikes: [/*1200, 1300, */ 1400, 1500, 1600],
 		depositSize: 1,
@@ -36,10 +33,7 @@ export const marketParams: MarketParams = {
 	},
 	WBTC: {
 		address: addresses.tokens.WBTC,
-		maturities: [
-			'17NOV23',
-			'24NOV23',
-		],
+		maturities: ['17NOV23', '24NOV23'],
 		callStrikes: [35000, 36000],
 		putStrikes: [34000, 35000],
 		depositSize: 0.05,
@@ -47,10 +41,7 @@ export const marketParams: MarketParams = {
 	},
 	ARB: {
 		address: (addresses.tokens as typeof productionTokenAddr).ARB,
-		maturities: [
-			'17NOV23',
-			'24NOV23',
-		],
+		maturities: ['17NOV23', '24NOV23'],
 		// callStrikes: [/*0.8,*/ 0.9, 1, 1.1 /*1.2*/],
 		// putStrikes: [/*0.5, 0.6, */ 0.7, 0.8, 0.9],
 		depositSize: 2500,
@@ -83,8 +74,8 @@ export const marketParams: MarketParams = {
 If an option markets delta goes outside the min/max range it will automatically be excluded from
 new liquidity deployment (this overrides the markets set in marketParams)
  */
-export const minDelta = 0.15 // .15 recommended
-export const maxDelta = 0.6 // .6 recommended
+export const minDelta = 0.01 // .15 recommended
+export const maxDelta = 0.99 // .6 recommended
 
 /*
 If an option market falls below this threshold, it will automatically be excluded from new
@@ -99,7 +90,7 @@ ahead of time (set to max uint256) to avoid approvals on each deposit.
 
 WARNING: This script does NOT remove max approval
  */
-export const maxCollateralApproved = false
+export const maxCollateralApproved = true
 
 /*
   NOTE: this will determine the width of the range order
@@ -148,7 +139,7 @@ happen when spot fails to exceed the spotMoveThreshold, but we still need to upd
 for time decay.
 NOTE: optimal range is likely 360 <-> 1440 min (6 <-> 24 hrs)
  */
-export const timeThresholdMin = 770 // expressed in minutes
+export const timeThresholdMin = 720 // expressed in minutes
 
 /*
 If set to true, when the bot initialized it will search for existing LP range orders

@@ -4,21 +4,44 @@ import {
 	OrderType,
 	TokenIdParams,
 } from '@premia/v3-sdk'
-import { getAddress, parseUnits, toBigInt } from 'ethers'
+import { MaxUint256, getAddress, parseUnits, toBigInt } from 'ethers'
 import { addresses } from '../constants'
+import { delay } from './time'
+import { log } from './logs'
 
 export async function setApproval(
 	collateralValue: number,
 	token: ISolidStateERC20,
+	retry: boolean = true,
 ) {
-	const decimals = Number(await token.decimals())
-	const mantissa = 10 ** decimals
-	const approvalAmount = parseUnits(
-		(Math.ceil(collateralValue * mantissa) / mantissa).toString(),
-		decimals,
-	)
+	try {
+		if (collateralValue === Number(MaxUint256)) {
+			return token.approve(
+				addresses.core.ERC20Router.address,
+				MaxUint256.toString(),
+			)
+		}
 
-	return token.approve(addresses.core.ERC20Router.address, approvalAmount)
+		const decimals = Number(await token.decimals())
+		const mantissa = 10 ** decimals
+		const approvalAmount = parseUnits(
+			(Math.ceil(collateralValue * mantissa) / mantissa).toString(),
+			decimals,
+		)
+
+		return token.approve(addresses.core.ERC20Router.address, approvalAmount)
+	} catch (err) {
+		await delay(2000)
+
+		if (retry) {
+			return setApproval(collateralValue, token, false)
+		} else {
+			log.error(
+				`Approval could not be set for ${await token.symbol()}! Try again or check provider and ETH balance...`,
+			)
+			throw err
+		}
+	}
 }
 
 export function formatTokenId({

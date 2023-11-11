@@ -1,11 +1,12 @@
 import isEqual from 'lodash.isequal'
-import { OrderType, formatTokenId } from '@premia/v3-sdk'
+import { IPool, OrderType, formatTokenId } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'
 import { lpAddress } from '../constants'
 import { PosKey, Position } from '../types'
 import { premia, provider } from '../contracts'
 import { getCurrentTimestamp } from '../utils/dates'
 import { log } from '../utils/logs'
+import { delay } from '../utils/time'
 
 export async function withdrawSettleLiquidity(
 	lpRangeOrders: Position[],
@@ -89,57 +90,16 @@ export async function withdrawSettleLiquidity(
 
 			// If pool expired attempt to settle position and ignore withdraw attempt
 			const exp = Number(poolSettings[4])
-			if (exp < getCurrentTimestamp()) {
-				log.info(`Pool expired. Settling position instead...`)
 
-				const settlePositionTx = await executablePool.settlePosition(posKey)
+			await withdrawPosition(executablePool, posKey, poolBalance, exp)
 
-				const confirm = await provider.waitForTransaction(
-					settlePositionTx.hash,
-					1,
-				)
-
-				if (confirm?.status == 0) {
-					log.warning(`No settlement of LP Range Order`)
-					log.warning(confirm)
-					continue
-				}
-
-				// remove range order from array if settlement is successful
-				lpRangeOrders = lpRangeOrders.filter(
-					(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
-				)
-				log.info(`LP Range Order settlement confirmed.`)
-			} else {
-				const withdrawTx = await executablePool.withdraw(
-					posKey,
-					parseEther(lpTokenBalance.toString()),
-					0,
-					parseEther('1'),
-					// { gasLimit: 1400000 },
-				)
-
-				const confirm = await provider.waitForTransaction(withdrawTx.hash, 1)
-
-				if (confirm?.status == 0) {
-					log.warning(`Failed withdrawal of LP Range Order`)
-					log.warning(confirm)
-					continue
-				}
-
-				// remove range order from array if withdraw is sucesseful
-				lpRangeOrders = lpRangeOrders.filter(
-					(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
-				)
-				log.info(`LP Range Order withdraw confirmed of size: ${lpTokenBalance}`)
-			}
+			// remove range order from array if settlement is successful
+			lpRangeOrders = lpRangeOrders.filter(
+				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
+			)
 
 			log.info(`Finished withdrawing or settling position.`)
-			log.debug(
-				`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`,
-			)
-		} catch (err) {
-			log.error(`Error withdrawing LP Range Order: ${err}`)
+		} finally {
 			log.debug(
 				`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`,
 			)
@@ -147,4 +107,67 @@ export async function withdrawSettleLiquidity(
 	}
 
 	return lpRangeOrders
+}
+
+async function withdrawPosition(
+	executablePool: IPool,
+	posKey: PosKey,
+	poolBalance: bigint,
+	exp: number,
+	retry: boolean = true,
+) {
+	if (exp < getCurrentTimestamp()) {
+		log.info(`Pool expired. Settling position instead...`)
+
+		try {
+			const settlePositionTx = await executablePool.settlePosition(posKey)
+			const confirm = await settlePositionTx.wait(1)
+
+			if (confirm?.status == 0) {
+				log.warning(`No settlement of LP Range Order`)
+				log.warning(confirm)
+				return
+			}
+
+			log.info(`LP Range Order settlement confirmed.`)
+		} catch (err) {
+			await delay(2000)
+
+			if (retry) {
+				return withdrawPosition(executablePool, posKey, poolBalance, exp, false)
+			} else {
+				log.error(`Error settling LP Range Order: ${err}`)
+				throw err
+			}
+		}
+	}
+
+	try {
+		const withdrawTx = await executablePool.withdraw(
+			posKey,
+			poolBalance.toString(),
+			0,
+			parseEther('1'),
+			// { gasLimit: 1400000 },
+		)
+
+		const confirm = await provider.waitForTransaction(withdrawTx.hash, 1)
+
+		if (confirm?.status == 0) {
+			log.warning(`Failed withdrawal of LP Range Order`)
+			log.warning(confirm)
+			return
+		}
+
+		log.info(`LP Range Order withdraw confirmed of size: ${poolBalance}`)
+	} catch (err) {
+		await delay(2000)
+
+		if (retry) {
+			return withdrawPosition(executablePool, posKey, poolBalance, exp, false)
+		} else {
+			log.error(`Error withdrawing LP Range Order: ${err}`)
+			throw err
+		}
+	}
 }

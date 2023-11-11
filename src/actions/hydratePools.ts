@@ -22,6 +22,7 @@ import {
 } from '../utils/rangeOrders'
 import { marketParams } from '../config'
 import { log } from '../utils/logs'
+import { delay } from '../utils/time'
 
 export async function deployLiquidity(
 	lpRangeOrders: Position[],
@@ -549,28 +550,16 @@ async function depositRangeOrderLiq(
 			parseFloat(formatEther(depositSizeBigInt)),
 		)
 
-		const depositTx = await executablePool[
-			'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)'
-		](
-			posKey,
-			nearestBelow.nearestBelowLower,
-			nearestBelow.nearestBelowUpper,
-			depositSizeBigInt,
-			0n,
-			parseEther('1'),
-			// {
-			// 	gasLimit: 10000000, // Fails to properly estimate gas limit
-			// },
-		)
-
-		const confirm = await provider.waitForTransaction(depositTx.hash, 1)
-
-		if (confirm?.status == 0) {
-			log.error('Last Transaction Failed!', confirm)
+		try {
+			await depositPosition(
+				executablePool,
+				posKey,
+				nearestBelow,
+				depositSizeBigInt,
+			)
+		} catch (err) {
 			return lpRangeOrders
 		}
-
-		log.info('Deposit confirmed.')
 
 		const serializedPosKey = {
 			owner: posKey.owner,
@@ -594,5 +583,57 @@ async function depositRangeOrderLiq(
 	} catch (e) {
 		log.error(`Error depositing range order: ${e}`)
 		return lpRangeOrders
+	}
+}
+
+async function depositPosition(
+	executablePool: IPool,
+	posKey: PosKey,
+	nearestBelow: [bigint, bigint] & {
+		nearestBelowLower: bigint
+		nearestBelowUpper: bigint
+	},
+	depositSize: bigint,
+	retry: boolean = true,
+) {
+	try {
+		const depositTx = await executablePool[
+			'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)'
+		](
+			posKey,
+			nearestBelow.nearestBelowLower,
+			nearestBelow.nearestBelowUpper,
+			depositSize,
+			0n,
+			parseEther('1'),
+			// {
+			// 	gasLimit: 10000000, // Fails to properly estimate gas limit
+			// },
+		)
+
+		const confirm = await depositTx.wait(1)
+
+		if (confirm?.status == 0) {
+			log.warning(`Failed deposit of LP Range Order`)
+			log.warning(confirm)
+			return
+		}
+
+		log.info(`LP Range Order deposit confirmed of size: ${depositSize}`)
+	} catch (err) {
+		await delay(2000)
+
+		if (retry) {
+			return depositPosition(
+				executablePool,
+				posKey,
+				nearestBelow,
+				depositSize,
+				false,
+			)
+		} else {
+			log.error(`Error depositing LP Range Order: ${err}`)
+			throw err
+		}
 	}
 }
