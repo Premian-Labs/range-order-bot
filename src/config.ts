@@ -2,8 +2,9 @@
 NOTE: Trade related settings may need to be tweaked from time to time depending on risk,
 market conditions, and changes in available strikes/expirations
  */
-import { MarketParams } from '../types'
-import { addresses } from './constants'
+import { MarketParams } from './types'
+import { addresses, productionTokenAddr } from './constants'
+import { LogLevel } from './utils/logs'
 
 /*
 These are the designates markets in which to provide liquidity for. Please note that it is
@@ -18,22 +19,83 @@ PREREQUISITE: there MUST be an IV oracle/surface for each market
 
  */
 
+// Set to one of the following to enable/disable logs: DEBUG | INFO | WARN | ERROR
+export const logLevel: LogLevel = 'INFO'
+
 export const marketParams: MarketParams = {
-	WETH: {
-		address: addresses.tokens.WETH,
-		maturities: ['27OCT23'],
-		callStrikes: [1500, 1600],
-		putStrikes: [1400, 1500],
-		depositSize: 0.1,
-		maxExposure: 1,
+	// WETH: {
+	// 	address: addresses.tokens.WETH,
+	// 	maturities: [
+	// 		// '27OCT23',
+	// 		'3NOV23',
+	// 		'10NOV23',
+	// 		'17NOV23',
+	// 		// '24NOV23',
+	// 		// '29DEC23',
+	// 		// '26JAN24',
+	// 		// '23FEB24',
+	// 	],
+	// 	// callStrikes: [/*1500,*/ 1600, 1700, 1800 /*, 1900*/],
+	// 	// putStrikes: [/*1200, 1300, */ 1400, 1500, 1600],
+	// 	depositSize: 1,
+	// 	maxExposure: 2,
+	// },
+	// WBTC: {
+	// 	address: addresses.tokens.WBTC,
+	// 	maturities: [
+	// 		// '27OCT23',
+	// 		// '3NOV23',
+	// 		// '10NOV23',
+	// 		'17NOV23',
+	// 		'24NOV23',
+	// 		// '29DEC23',
+	// 		// '26JAN24',
+	// 		// '23FEB24',
+	// 	],
+	// 	callStrikes: [35000, 36000],
+	// 	putStrikes: [34000, 35000],
+	// 	depositSize: 0.05,
+	// 	maxExposure: 0.1,
+	// },
+	ARB: {
+		address: (addresses.tokens as typeof productionTokenAddr).ARB,
+		maturities: [
+			// '27OCT23',
+			// '3NOV23',
+			// '10NOV23',
+			'17NOV23',
+			'24NOV23',
+			'01DEC23',
+			'08DEC23',
+			// '29DEC23',
+			// '26JAN24',
+			// '23FEB24',
+		],
+		// callStrikes: [/*0.8,*/ 0.9, 1, 1.1 /*1.2*/],
+		// putStrikes: [/*0.5, 0.6, */ 0.7, 0.8, 0.9],
+		depositSize: 2500,
+		maxExposure: 5000,
 	},
-	WBTC: {
-		address: addresses.tokens.WBTC,
-		maturities: ['27OCT23'],
-		callStrikes: [27000, 28000],
-		putStrikes: [26000, 27000],
-		depositSize: 0.01,
-		maxExposure: 0.1,
+
+	MAGIC: {
+		address: (addresses.tokens as typeof productionTokenAddr).MAGIC,
+		maturities: ['17NOV23', '24NOV23', '01DEC23', '08DEC23'],
+		depositSize: 100,
+		maxExposure: 1000,
+	},
+
+	GMX: {
+		address: (addresses.tokens as typeof productionTokenAddr).GMX,
+		maturities: ['17NOV23', '24NOV23', '01DEC23', '08DEC23'],
+		depositSize: 10,
+		maxExposure: 100,
+	},
+
+	LINK: {
+		address: (addresses.tokens as typeof productionTokenAddr).LINK,
+		maturities: ['17NOV23', '24NOV23', '01DEC23', '08DEC23'],
+		depositSize: 10,
+		maxExposure: 100,
 	},
 }
 
@@ -84,13 +146,13 @@ IMPORTANT: This is NORMALIZED PRICE. Calls are price in underlying and puts
 are priced in USDC but based on the strike price. For example, a 1500 strike
 put at 0.004 is (0.004 * 1500) in USDC terms.
  */
-export const minOptionPrice = 0.004
+export const minOptionPrice = 0.003
 
 /*
 This is the amount of spot price movement since the last range order update that will force a new
 update of range orders.  It is percentage based and formatted as a decimal (ie 0.01 -> 1%)
  */
-export const spotMoveThreshold = 0.01 //1%
+export const spotMoveThreshold = 0.025 // 1%
 
 /*
 This is the amount of time in minutes that the spot price & ts for a given market is checked to see
@@ -106,7 +168,7 @@ happen when spot fails to exceed the spotMoveThreshold, but we still need to upd
 for time decay.
 NOTE: optimal range is likely 360 <-> 1440 min (6 <-> 24 hrs)
  */
-export const timeThresholdMin = 30 // expressed in minutes
+export const timeThresholdMin = 770 // expressed in minutes
 
 /*
 If set to true, when the bot initialized it will search for existing LP range orders
@@ -122,17 +184,6 @@ dust annihilation, a min value to annihilate is set to avoid unnecessary transac
 is represented in standard value (and converted to 18 decimal places automatically).
  */
 export const minAnnihilationSize = 0.05
-
-/*
-When withdrawing lp positions, there may be a difference between what is
-shown in the lpPositions.json and what exists on chain.  This may happen for
-a number of reasons, ie setting withdrawExistingPositions to FALSE.
-If set to true, the withdrawPool script will check the on chain balance of the
-posKey and not the one in the json.
-
-TIP: there should not be many cases where you want this to be set to false.
- */
-export const useRangeOrderBalance = true
 
 /*
   NOTE:  If set to true, pool will be deployed if not available.

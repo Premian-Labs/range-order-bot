@@ -1,43 +1,26 @@
-import { AddressLike, BigNumberish } from 'ethers'
-
-export enum TokenType {
-	SHORT = 0,
-	LONG = 1,
-}
-export enum OrderType {
-	CS = 1,
-	LC = 2,
-}
-export interface PoolKey {
-	base: string
-	quote: string
-	oracleAdapter: string
-	strike: BigNumberish
-	maturity: BigNumberish
-	isCallPool: boolean
-}
+import { OrderType } from '@premia/v3-sdk'
 
 export interface PosKey {
-	owner: AddressLike
-	operator: AddressLike
-	lower: BigNumberish
-	upper: BigNumberish
-	orderType: OrderType // Collateral <-> Long Option
+	owner: string
+	operator: string
+	lower: bigint
+	upper: bigint
+	orderType: OrderType
 }
 
 export interface SerializedPosKey {
-	owner: AddressLike
-	operator: AddressLike
+	owner: string
+	operator: string
 	lower: string
 	upper: string
-	orderType: OrderType // Collateral <-> Long Option
+	orderType: OrderType
 }
 
 export interface MarketParam {
 	address: string
 	maturities: string[]
-	callStrikes: number[]
-	putStrikes: number[]
+	callStrikes?: number[] // if not passed, will be inferred from delta range
+	putStrikes?: number[] // if not passed, will be inferred from delta range
 	depositSize: number
 	maxExposure: number
 	spotPrice?: number
@@ -54,12 +37,4 @@ export interface Position {
 	poolAddress: string
 	depositSize: number
 	posKey: SerializedPosKey
-}
-
-export interface TokenIdParams {
-	version: number
-	orderType: OrderType
-	operator: string
-	upper: BigNumberish
-	lower: BigNumberish
 }
