@@ -154,9 +154,9 @@ async function withdrawPosition(
 		const confirm = await provider.waitForTransaction(withdrawTx.hash, 1)
 
 		if (confirm?.status == 0) {
-			log.warning(`Failed withdrawal of LP Range Order`)
-			log.warning(confirm)
-			return
+			throw new Error(
+				`Failed to confirm withdrawal of LP Range Order: ${confirm}`,
+			)
 		}
 
 		log.info(`LP Range Order withdraw confirmed of size: ${poolBalance}`)

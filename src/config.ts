@@ -90,7 +90,7 @@ ahead of time (set to max uint256) to avoid approvals on each deposit.
 
 WARNING: This script does NOT remove max approval
  */
-export const maxCollateralApproved = true
+export const maxCollateralApproved = false
 
 /*
   NOTE: this will determine the width of the range order

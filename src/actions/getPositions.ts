@@ -7,6 +7,7 @@ import { createExpiration, getLast30Days } from '../utils/dates'
 import { premia } from '../contracts'
 import { parseTokenId } from '../utils/tokens'
 import { log } from '../utils/logs'
+import { calculatePoolAddress } from '../utils/pools'
 
 export async function getExistingPositions(market: string, spotPrice: number) {
 	let lpRangeOrders: Position[] = []
@@ -115,7 +116,7 @@ async function processStrike(
 	try {
 		poolAddress = await premia.pools.getPoolAddress(poolKey)
 	} catch {
-		return
+		poolAddress = calculatePoolAddress(poolKey)
 	}
 
 	const pool = premia.contracts.getPoolContract(

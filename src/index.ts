@@ -133,14 +133,7 @@ async function runRangeOrderBot() {
 					premia.signer as any,
 				)
 
-				const approveTX = await setApproval(Number(MaxUint256), token)
-				const confirm = await approveTX.wait(1)
-
-				if (confirm?.status == 0) {
-					throw new Error(
-						`Max approval NOT set for ${market}! Try again or check provider or ETH balance...`,
-					)
-				}
+				await setApproval(MaxUint256, token)
 
 				log.info(`${market} approval set to MAX`)
 			}
@@ -151,17 +144,7 @@ async function runRangeOrderBot() {
 				premia.signer as any,
 			)
 
-			const approveTX = await token.approve(
-				addresses.core.ERC20Router.address,
-				MaxUint256.toString(),
-			)
-			const confirm = await approveTX.wait(1)
-
-			if (confirm?.status == 0) {
-				throw new Error(
-					`Max approval NOT set for USDC! Try again or check provider or ETH balance...`,
-				)
-			}
+			await setApproval(MaxUint256, token)
 
 			log.info(`USDC approval set to MAX`)
 		}

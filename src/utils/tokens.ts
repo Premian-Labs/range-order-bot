@@ -4,32 +4,43 @@ import {
 	OrderType,
 	TokenIdParams,
 } from '@premia/v3-sdk'
-import { MaxUint256, getAddress, parseUnits, toBigInt } from 'ethers'
+import { MaxUint256, getAddress, toBigInt } from 'ethers'
 import { addresses } from '../constants'
 import { delay } from './time'
 import { log } from './logs'
+import { signerAddress } from '../contracts'
 
 export async function setApproval(
-	collateralValue: number,
+	collateralValue: bigint,
 	token: ISolidStateERC20,
 	retry: boolean = true,
 ) {
 	try {
-		if (collateralValue === Number(MaxUint256)) {
+		const allowance = await token.allowance(
+			signerAddress,
+			addresses.core.ERC20Router.address,
+		)
+
+		if (allowance >= collateralValue) {
+			return
+		}
+
+		if (collateralValue === MaxUint256) {
 			return token.approve(
 				addresses.core.ERC20Router.address,
 				MaxUint256.toString(),
 			)
 		}
 
-		const decimals = Number(await token.decimals())
-		const mantissa = 10 ** decimals
-		const approvalAmount = parseUnits(
-			(Math.ceil(collateralValue * mantissa) / mantissa).toString(),
-			decimals,
+		const approveTX = await token.approve(
+			addresses.core.ERC20Router.address,
+			collateralValue,
 		)
+		const confirm = await approveTX.wait(1)
 
-		return token.approve(addresses.core.ERC20Router.address, approvalAmount)
+		if (confirm?.status == 0) {
+			throw new Error(`Failed to confirm approval set: ${confirm}`)
+		}
 	} catch (err) {
 		await delay(2000)
 
