@@ -9,6 +9,8 @@ import { parseTokenId } from '../utils/tokens'
 import { log } from '../utils/logs'
 import { calculatePoolAddress } from '../utils/pools'
 
+
+// NOTE: this will find ALL range orders by user (not just from the bot)
 export async function getExistingPositions(market: string, spotPrice: number) {
 	let lpRangeOrders: Position[] = []
 
