@@ -1,5 +1,11 @@
 import moment from 'moment'
 import { SECONDS_IN_YEAR } from '../constants'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+
+dayjs.extend(utc)
+
+export const FRIDAY = 5
 
 export function getCurrentTimestamp(): number {
 	return moment.utc().unix()
@@ -61,13 +67,7 @@ export function createExpiration(maturity: string): number {
 	return expirationMoment.add(8, 'hours').unix()
 }
 
-import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
-
-dayjs.extend(utc)
-
-export const FRIDAY = 5
-
+//TODO:  do we need this? (no usage)
 export function nextYearOfMaturities(): dayjs.Dayjs[] {
 	const maturities: dayjs.Dayjs[] = []
 	const now = dayjs().utc()

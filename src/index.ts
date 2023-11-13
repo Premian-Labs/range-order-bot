@@ -138,7 +138,7 @@ async function runRangeOrderBot() {
 				log.info(`${market} approval set to MAX`)
 			}
 
-			// Approval for quote token
+			// Approval for quote token (USDC only)
 			const token = premia.contracts.getTokenContract(
 				addresses.tokens.USDC,
 				premia.signer as any,
@@ -166,7 +166,7 @@ async function main() {
 			'Completed, idling... View your active positions at https://app.premia.finance/pools',
 		)
 
-		await delay(refreshRate * 60 * 1000) // refresh rate in min -> milsec
+		await delay(refreshRate * 60 * 1000) // refresh rate from min -> milli sec
 	}
 }
 

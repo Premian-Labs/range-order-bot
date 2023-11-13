@@ -7,21 +7,25 @@ import { addresses, productionTokenAddr } from './constants'
 import { LogLevel } from './utils/logs'
 
 /*
+Log levels can be set to one of the following levels: DEBUG | INFO | WARN | ERROR.  Each level is inclusive
+of the next levels.  For example, if you set to INFO, you will also receive INFO, WARN, & ERROR logs.
+ */
+export const logLevel: LogLevel = 'INFO'
+
+
+/*
 These are the designates markets in which to provide liquidity for. Please note that it is
 possible some markets will not trade if certain settings/thresholds are breached.  All
 settings/thresholds can be found below marketParam configuration.
 
-NOTE: max exposure applies to EITHER long or short exposure limits. It will override one side
-of range orders and by bid-only or ask-only if a position limit is hit. The limit is for EACH
-option (K,T) individually, not collectively.
-
-PREREQUISITE: there MUST be an IV oracle/surface for each market
-
+NOTE: max exposure applies to EITHER long or short exposure limits (contracts). It will override
+one side of range orders and be bid-only or ask-only if a position limit is hit (close only mode).
+Limits apply for EACH option (K,T) individually, not collectively. There MUST be an IV oracle/surface
+for each market.  Please see the README for available markets.  Any markets that is not intended to be
+traded should be completely removed from marketParams.
  */
 
-// Set to one of the following to enable/disable logs: DEBUG | INFO | WARN | ERROR
-export const logLevel: LogLevel = 'INFO'
-
+// TODO: do we want wstETH market in here since we are adding all available markets?
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,

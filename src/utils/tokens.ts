@@ -4,7 +4,7 @@ import {
 	OrderType,
 	TokenIdParams,
 } from '@premia/v3-sdk'
-import { MaxUint256, getAddress, toBigInt } from 'ethers'
+import { MaxUint256, getAddress } from 'ethers'
 import { addresses } from '../constants'
 import { delay } from './time'
 import { log } from './logs'
@@ -43,8 +43,8 @@ export async function setApproval(
 		}
 	} catch (err) {
 		await delay(2000)
-
 		if (retry) {
+			// TODO: why do a recursive pattern? Seems OK here, but not a robust pattern.
 			return setApproval(collateralValue, token, false)
 		} else {
 			log.error(
@@ -53,22 +53,6 @@ export async function setApproval(
 			throw err
 		}
 	}
-}
-
-export function formatTokenId({
-	version,
-	operator,
-	lower,
-	upper,
-	orderType,
-}: TokenIdParams) {
-	let tokenId = toBigInt(version ?? 0) << 252n
-	tokenId = tokenId + (toBigInt(orderType.valueOf()) << 180n)
-	tokenId = tokenId + (toBigInt(operator) << 20n)
-	tokenId = tokenId + ((toBigInt(upper) / MIN_TICK_DISTANCE) << 10n)
-	tokenId = tokenId + toBigInt(lower) / MIN_TICK_DISTANCE
-
-	return tokenId
 }
 
 export function parseTokenId(tokenId: bigint): TokenIdParams {
