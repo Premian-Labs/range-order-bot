@@ -12,7 +12,6 @@ of the next levels.  For example, if you set to INFO, you will also receive INFO
  */
 export const logLevel: LogLevel = 'INFO'
 
-
 /*
 These are the designates markets in which to provide liquidity for. Please note that it is
 possible some markets will not trade if certain settings/thresholds are breached.  All

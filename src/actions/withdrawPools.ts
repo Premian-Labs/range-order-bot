@@ -6,9 +6,7 @@ import { PosKey, Position } from '../types'
 import { premia, provider } from '../contracts'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
-import moment from "moment/moment";
-
-
+import moment from 'moment/moment'
 
 // NOTE: This will only withdraw positions in lpRangeOrders
 export async function withdrawSettleLiquidity(
@@ -107,7 +105,7 @@ export async function withdrawSettleLiquidity(
 			// If pool expired attempt to settle position and ignore withdraw attempt
 			const exp = Number(poolSettings[4])
 
-			// TODO: what is the catch block if this throws?
+			// TODO: what is the catch block if this throws We do not want to remove from lpRangeOrders?
 			await withdrawPosition(executablePool, posKey, poolBalance, exp)
 
 			// remove range order from array if settlement is successful

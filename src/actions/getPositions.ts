@@ -9,7 +9,6 @@ import { parseTokenId } from '../utils/tokens'
 import { log } from '../utils/logs'
 import { calculatePoolAddress } from '../utils/pools'
 
-
 // NOTE: this will find ALL range orders by user (not just from the bot)
 export async function getExistingPositions(market: string, spotPrice: number) {
 	let lpRangeOrders: Position[] = []
@@ -39,9 +38,7 @@ export async function getExistingPositions(market: string, spotPrice: number) {
 	return lpRangeOrders
 }
 
-
 // TODO: all the below functions are used once (inline). Why create functions for them?
-
 
 async function processMaturity(
 	maturityString: string,
