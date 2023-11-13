@@ -16,6 +16,7 @@ export async function getExistingPositions(market: string, spotPrice: number) {
 
 	try {
 		const maturities = [...getLast30Days(), ...nextYearOfMaturities()].map(
+			// NOTE: maturity now follows "03NOV23" string format
 			(maturity) => maturity.format('DDMMMYY'),
 		)
 
@@ -32,8 +33,13 @@ export async function getExistingPositions(market: string, spotPrice: number) {
 		log.debug(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
 	}
 
+	// NOTE: lpRangeOrders array is populated in the last function call => processTokenIds ()
 	return lpRangeOrders
 }
+
+
+// TODO: all the below functions are used once (inline). Why create functions for them?
+
 
 async function processMaturity(
 	maturityString: string,
@@ -44,6 +50,7 @@ async function processMaturity(
 	let maturityTimestamp: number
 
 	try {
+		// FIXME: createExpiration() wont work for dates in the past
 		maturityTimestamp = createExpiration(maturityString)
 	} catch {
 		log.error(`Invalid maturity: ${maturityString}`)
@@ -72,6 +79,9 @@ async function processOptionType(
 	maturityTimestamp: number,
 	lpRangeOrders: Position[],
 ) {
+	// TODO: what comes back if spot price input is undefined?
+	// TODO: what range of strikes does getSuggestedStrikes() return?
+	// FIXME: we need all strikes inwhich a poool was created
 	const strikes = premia.options.getSuggestedStrikes(
 		parseEther(spotPrice.toString()),
 	)
@@ -113,6 +123,7 @@ async function processStrike(
 
 	let poolAddress: string
 
+	// TODO: Why event attempt to get poolAddress if we can calculate it?
 	try {
 		poolAddress = await premia.pools.getPoolAddress(poolKey)
 	} catch {
@@ -131,6 +142,7 @@ async function processStrike(
 			(tokenId) => tokenId > 2n,
 		)
 	} catch {
+		//TODO: should we be logging this as an issue (make note of which market)?
 		return
 	}
 

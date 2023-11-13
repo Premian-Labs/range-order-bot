@@ -4,9 +4,9 @@ import { parseEther, formatEther } from 'ethers'
 import { lpAddress } from '../constants'
 import { PosKey, Position } from '../types'
 import { premia, provider } from '../contracts'
-import { getCurrentTimestamp } from '../utils/dates'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
+import moment from "moment/moment";
 
 export async function withdrawSettleLiquidity(
 	lpRangeOrders: Position[],
@@ -24,9 +24,11 @@ export async function withdrawSettleLiquidity(
 		return lpRangeOrders
 	}
 
-	/// @dev: no point parallelizing this since we need to wait for each tx to confirm
-	///		  with a better nonce manager, this would not be necessary since withdrawals
-	///		  are independent of each other
+	/*
+		@dev: no point process parallel tx this since we need to wait for each tx to confirm
+		with a better nonce manager, this would not be necessary since withdrawals
+		are independent of each other
+	 */
 	for (const filteredRangeOrder of filteredRangeOrders) {
 		log.info(
 			`Processing withdraw for size: ${filteredRangeOrder.depositSize} in ${
@@ -116,7 +118,7 @@ async function withdrawPosition(
 	exp: number,
 	retry: boolean = true,
 ) {
-	if (exp < getCurrentTimestamp()) {
+	if (exp < moment.utc().unix()) {
 		log.info(`Pool expired. Settling position instead...`)
 
 		try {

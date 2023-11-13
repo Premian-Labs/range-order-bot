@@ -13,7 +13,6 @@ import { addresses } from './constants'
 import { Position } from './types'
 import { getExistingPositions } from './actions/getPositions'
 import { deployLiquidity } from './actions/hydratePools'
-import { getCurrentTimestamp } from './utils/dates'
 import { premia } from './contracts'
 import { log } from './utils/logs'
 import { delay } from './utils/time'
@@ -23,9 +22,11 @@ import { setApproval } from './utils/tokens'
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)
 
+	// NOTE: getSpotPrice() returns undefined if multiple attempts fail
 	marketParams[market].spotPrice = await getSpotPrice(market)
-	marketParams[market].ts = getCurrentTimestamp()
+	marketParams[market].ts = moment.utc().unix()
 
+	// FIXME: getSuggestedStrikes() wont work if spotPrice is undefined
 	lpRangeOrders = await getExistingPositions(
 		market,
 		marketParams[market].spotPrice!,
@@ -47,7 +48,7 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 async function maintainPositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Running position maintenance process for ${market}`)
 
-	const ts = getCurrentTimestamp() // seconds
+	const ts = moment.utc().unix() // seconds
 
 	// attempt to get curent price (retry if error, and skip on failure)
 	const curPrice = await getSpotPrice(market)
