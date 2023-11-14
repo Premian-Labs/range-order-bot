@@ -3,9 +3,9 @@ import { formatEther, parseEther } from 'ethers'
 import { productionTokenAddr } from '../constants'
 import { maxDelta, minDelta, riskFreeRate } from '../config'
 import { BlackScholes, Option } from '@uqee/black-scholes'
-import { createExpiration, getTTM } from '../utils/dates'
+import { createExpiration, getTTM } from './dates'
 import { premia, ivOracle } from '../contracts'
-import { log } from '../utils/logs'
+import { log } from './logs'
 
 const blackScholes: BlackScholes = new BlackScholes()
 
@@ -20,6 +20,12 @@ export async function getValidStrikes(
 		? marketParams[market].callStrikes
 		: marketParams[market].putStrikes
 
+	// TODO: what does getSuggestedStrikes return exactly?
+	// FIXME: how is suggestedStrikes limited
+	/*
+	getSuggestedStrike() =>  will look for valid strikes from (.5 * spot) to (2 * spot) using
+	our algorithmic logic for valid strike intervals.
+	 */
 	const suggestedStrikes =
 		strikes ??
 		premia.options
@@ -31,9 +37,11 @@ export async function getValidStrikes(
 		option: Option
 	}[] = []
 
+	// FIXME: we already run createExpiration() within processStrike() which feeds into getValidStrikes()
 	const maturityTimestamp = createExpiration(maturityString)
 	const ttm = getTTM(maturityTimestamp)
 
+	// NOTE: we use a multicallProvider for the ivOracle query
 	await Promise.all(
 		suggestedStrikes.map(async (strike) => {
 			const iv = await ivOracle[
@@ -59,6 +67,8 @@ export async function getValidStrikes(
 			const maxDeltaThreshold = Math.abs(option.delta) > maxDelta
 			const minDeltaThreshold = Math.abs(option.delta) < minDelta
 
+			// FIXME: strikes can be undefined based on first line of function
+			// TODO: what is strikes supposed to be in here? What is it doing?
 			if (strikes && (maxDeltaThreshold || minDeltaThreshold)) {
 				log.warning(
 					`Skipping ${market} ${maturityString} ${isCall ? 'Calls' : 'Puts'}`,
@@ -67,6 +77,8 @@ export async function getValidStrikes(
 				log.warning(`Option out of delta range. Delta: ${option.delta}`)
 				return
 			} else if (maxDeltaThreshold || minDeltaThreshold) {
+				// TODO: need a warning if a market is not being trades for delta range reasons
+				// NOTE: there are a large number of strikes that come back if you use getSuggestedStrikes()
 				return
 			}
 

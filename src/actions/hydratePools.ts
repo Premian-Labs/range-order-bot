@@ -32,12 +32,11 @@ export async function deployLiquidity(
 	log.app(`Deploying liquidity for ${market}`)
 
 	try {
-		/// @dev: no point parallelizing this since we need to wait for each tx to confirm
-		///		  with a better nonce manager, this would not be necessary since withdrawals
-		///		  are independent of each other
 		for (const maturityString of marketParams[market].maturities) {
+			// TODO: log the maturity incase there is an error we know which one
 			log.info(`Spot Price for ${market}: ${spotPrice}`)
 
+			// calls
 			lpRangeOrders = await processStrikes(
 				market,
 				spotPrice,
@@ -47,6 +46,7 @@ export async function deployLiquidity(
 				lpRangeOrders,
 			)
 
+			// puts
 			lpRangeOrders = await processStrikes(
 				market,
 				spotPrice,
@@ -82,16 +82,16 @@ export async function processStrikes(
 
 	log.debug(`Maturity TS: ${maturityTimestamp} (${daysToExpiration} DTE)`)
 
-	// 1.1 check if option already expired
+	// check if option already expired
 	if (daysToExpiration <= 0) {
 		log.warning(`Skipping expiration date: ${maturityString} is in the past`)
 		return lpRangeOrders
 	}
 
-	// 1.2 check if option expiration is more than 1 year out
+	// check if option expiration is more than 1 year out
 	if (daysToExpiration > 365) {
 		log.warning(
-			`Skipping expiration date: ${maturityString} is more then in 1 year`,
+			`Skipping expiration date: ${maturityString} is more than in 1 year`,
 		)
 		return lpRangeOrders
 	}
@@ -104,9 +104,6 @@ export async function processStrikes(
 		isCall,
 	)
 
-	/// @dev: no point parallelizing this since we need to wait for each tx to confirm
-	///		  with a better nonce manager, this would not be necessary since withdrawals
-	///		  are independent of each other
 	for (const { strike, option } of strikes) {
 		log.info(`Depositing for ${maturityString}-${strike}-${isCall ? 'C' : 'P'}`)
 

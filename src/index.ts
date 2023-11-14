@@ -36,6 +36,7 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
 	}
 
+	// FIXME: processStrikes()/getValidStrikes() wont work if spotPrice is undefined
 	lpRangeOrders = await deployLiquidity(
 		lpRangeOrders,
 		market,
@@ -50,10 +51,11 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 
 	const ts = moment.utc().unix() // seconds
 
-	// attempt to get curent price (retry if error, and skip on failure)
+	// NOTE: can return undefined after multiple attempts
 	const curPrice = await getSpotPrice(market)
 
 	if (!curPrice) {
+		// TODO: we should give a warning that price feed failed to get price
 		return lpRangeOrders
 	}
 
@@ -62,6 +64,13 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 		curPrice,
 		moment.utc().format('YYYY-MM-HH:mm:ss'),
 	)
+
+	/*
+	It costs ~ $1 total to do a deposit and withdraw (round turn).  We need to optimize
+	which range orders we are updating to avoid unnecessary costs.
+	 */
+	// TODO: use theta decay instead of fixed frequency
+	// TODO: use delta as a threshold
 
 	// All conditional thresholds that trigger an update
 	const refPrice = marketParams[market].spotPrice!

@@ -35,7 +35,6 @@ const arbiPremia =
 				provider: volatilityOracleRpcUrl,
 		  })
 
-//TODO: why do we need a multicallProvider for this?
 export const ivOracle = IVolatilityOracle__factory.connect(
 	volatilityOracle,
 	arbiPremia.multicallProvider as any,

@@ -13,24 +13,36 @@ of the next levels.  For example, if you set to INFO, you will also receive INFO
 export const logLevel: LogLevel = 'INFO'
 
 /*
-These are the designates markets in which to provide liquidity for. Please note that it is
-possible some markets will not trade if certain settings/thresholds are breached.  All
-settings/thresholds can be found below marketParam configuration.
+These are the designated markets in which to provide liquidity for. Please note that it is
+possible some markets listed here might not trade if certain thresholds set by the user are breached.
+All these settings/thresholds can be found below marketParam configuration.
 
-NOTE: max exposure applies to EITHER long or short exposure limits (contracts). It will override
-one side of range orders and be bid-only or ask-only if a position limit is hit (close only mode).
-Limits apply for EACH option (K,T) individually, not collectively. There MUST be an IV oracle/surface
-for each market.  Please see the README for available markets.  Any markets that is not intended to be
-traded should be completely removed from marketParams.
+markets (required): There MUST be an IV oracle/surface for each market.  Please see the README for available
+markets. Any markets that is not intended to be traded should be completely removed from marketParams.
+
+strikes (optional): a user can input specific strikes that they would like to trade.  Optionally, if they would like
+to trade all applicable markets (within a delta range), both callSTrikes and putStrikes can be COMPLETELY removed.
+In this case the bot will depend on the min/max delta range as the limiting factors and the bot will trade
+everything inbetween.
+
+depositSize (required): this is based on the number of option contracts your range order could possibly trade if
+traversed fully. This should be smaller than maxExposure.  Note that collateral requirements are different for long
+option positions vs short option positions.
+
+maxExposure (required): max exposure applies to EITHER long or short exposure limits (contracts) when an exposure (long
+or short) is greater than or equal to this value. It will then enter into "close only" mode where it posts only one
+range order using the existing positions in an attempt to close them. Limits apply for EACH option (K,T) individually,
+not collectively.
  */
 
 // TODO: do we want wstETH market in here since we are adding all available markets?
+// TODO: provide a "rule of thumb" deposit size based on available capital
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,
 		maturities: ['17NOV23', '24NOV23'],
-		// callStrikes: [/*1500,*/ 1600, 1700, 1800 /*, 1900*/],
-		// putStrikes: [/*1200, 1300, */ 1400, 1500, 1600],
+		callStrikes: [1500, 1600, 1700, 1800, 1900],
+		putStrikes: [1200, 1300, 1400, 1500, 1600],
 		depositSize: 1,
 		maxExposure: 2,
 	},
@@ -45,8 +57,8 @@ export const marketParams: MarketParams = {
 	ARB: {
 		address: (addresses.tokens as typeof productionTokenAddr).ARB,
 		maturities: ['17NOV23', '24NOV23'],
-		// callStrikes: [/*0.8,*/ 0.9, 1, 1.1 /*1.2*/],
-		// putStrikes: [/*0.5, 0.6, */ 0.7, 0.8, 0.9],
+		callStrikes: [0.8, 0.9, 1, 1.1, 1.2],
+		putStrikes: [0.5, 0.6, 0.7, 0.8, 0.9],
 		depositSize: 2500,
 		maxExposure: 5000,
 	},
