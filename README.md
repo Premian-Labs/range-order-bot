@@ -61,7 +61,7 @@ is familiar with how range orders work, and the risks associated with owning opt
 3. Create a `.env` file using the same format at the example and add necessary information. Note that ENV should
    either be `development` or `production`.
 4. Navigate to `src/config/config.example.ts` and review each and ever setting. Create a new file called 
-   `config.ts` to populate custom settings. Instructions & descriptions of settings are provided in the example file.
+   `config.ts` to populate custom settings by copy-pasting from example file. Instructions & descriptions of settings are provided in the example file.
 5. Run `yarn start` in the command line to run the range order bot.
 
 ## Improvement List & Changelog
@@ -71,3 +71,4 @@ is familiar with how range orders work, and the risks associated with owning opt
 - [x] ignore liquidity settings to avoid loss of trade setting on repo updates
 - [ ] add delta and theta based lp range updates for more efficient updating
 - [ ] remove npm token requirement on SDK 
+- [ ] add sell-only or buy-only exposure settings in marketParams to provide one-sided liq

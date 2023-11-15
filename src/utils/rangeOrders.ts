@@ -42,7 +42,7 @@ export async function getCollateralApprovalAmount(
 		/*
 			NOTE: all other cases, we are  use options instead of collateral so the collateral
 			amount to approve is zero
-			ie. order type CS & isLeftSide -> short options being posted on LEFT side
+			ie order type CS & isLeftSide -> short options being posted on LEFT side
 		*/
 		return 0
 	}

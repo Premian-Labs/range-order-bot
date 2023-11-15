@@ -1,4 +1,6 @@
-import {PosKey, Position, MarketParams} from '../utils/types'
+// noinspection ExceptionCaughtLocallyJS
+
+import { PosKey, Position, MarketParams } from '../utils/types'
 import { formatEther, parseEther, formatUnits, parseUnits } from 'ethers'
 import { lpAddress, addresses } from '../config/constants'
 import {

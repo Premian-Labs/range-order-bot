@@ -1,6 +1,8 @@
+// noinspection JSUnusedGlobalSymbols,DuplicatedCode
+
 /*
 NOTE: Trade related settings may need to be tweaked from time to time depending on risk,
-market conditions, and changes in available strikes/expirations
+market conditions, and changes in available strikes/expirations.
  */
 import { MarketParams } from '../utils/types'
 import { addresses } from './constants'
@@ -49,24 +51,24 @@ put at 0.004 is (0.004 * 1500) in USDC terms.
  */
 
 export const marketParams: MarketParams = {
-    WETH: {
-        address: addresses.tokens.WETH,
-        maturities: ['17NOV23', '24NOV23'],
-        callStrikes: [1500, 1600, 1700, 1800, 1900],
-        putStrikes: [1200, 1300, 1400, 1500, 1600],
-        depositSize: 1,
-        maxExposure: 2,
-        minOptionPrice: 0.003
-    },
-    WBTC: {
-        address: addresses.tokens.WBTC,
-        maturities: ['17NOV23', '24NOV23'],
-        callStrikes: [35000, 36000],
-        putStrikes: [34000, 35000],
-        depositSize: 0.05,
-        maxExposure: 0.1,
-        minOptionPrice: 0.003
-    },
+	WETH: {
+		address: addresses.tokens.WETH,
+		maturities: ['17NOV23', '24NOV23'],
+		callStrikes: [1500, 1600, 1700, 1800, 1900],
+		putStrikes: [1200, 1300, 1400, 1500, 1600],
+		depositSize: 1,
+		maxExposure: 2,
+		minOptionPrice: 0.003,
+	},
+	WBTC: {
+		address: addresses.tokens.WBTC,
+		maturities: ['17NOV23', '24NOV23'],
+		callStrikes: [35000, 36000],
+		putStrikes: [34000, 35000],
+		depositSize: 0.05,
+		maxExposure: 0.1,
+		minOptionPrice: 0.003,
+	},
 }
 
 /*

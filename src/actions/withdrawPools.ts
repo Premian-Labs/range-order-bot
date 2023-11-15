@@ -1,3 +1,5 @@
+// noinspection ExceptionCaughtLocallyJS
+
 import isEqual from 'lodash.isequal'
 import { IPool, OrderType, formatTokenId } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'

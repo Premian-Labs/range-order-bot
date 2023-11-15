@@ -5,7 +5,7 @@ import {
 	Premia,
 	SupportedChainId,
 } from '@premia/v3-sdk'
-import { JsonRpcProvider, Wallet } from 'ethers'
+import { Wallet } from 'ethers'
 import {
 	addresses,
 	privateKey,
@@ -19,7 +19,6 @@ export const premia = Premia.initializeSync({
 	privateKey,
 })
 
-export const provider = premia.provider as JsonRpcProvider
 export const signerAddress = (premia.signer as Wallet).address
 
 export const poolFactory = IPoolFactory__factory.connect(

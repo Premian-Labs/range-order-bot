@@ -1,3 +1,5 @@
+// noinspection ExceptionCaughtLocallyJS
+
 import {
 	ISolidStateERC20,
 	MIN_TICK_DISTANCE,
