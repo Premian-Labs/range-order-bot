@@ -135,7 +135,6 @@ export async function processStrikes(
 
 		// check to see if we have positions that can be annihilated
 		await processAnnihilate(
-			multicallPool,
 			executablePool,
 			market,
 			maturityString,
@@ -187,7 +186,7 @@ export async function processStrikes(
 			we are not breaching any limits (ie max exposure or low account collateral balance)
 		*/
 
-		await processDeposits(
+		lpRangeOrders = await processDeposits(
 			lpRangeOrders,
 			executablePool,
 			poolAddress,
@@ -293,7 +292,6 @@ async function fetchOrDeployPool(
 }
 
 async function processAnnihilate(
-	multicallPool: IPool,
 	executablePool: IPool,
 	market: string,
 	maturityString: string,
@@ -381,7 +379,7 @@ async function processDeposits(
 		${strike} 
 		${isCall ? 'Call' : 'Put'}`,
 		)
-		return
+		return lpRangeOrders
 	}
 
 	// check to see if we have breached our position limit for RIGHT SIDE orders
@@ -427,6 +425,7 @@ async function processDeposits(
 			lpRangeOrders,
 		)
 	}
+	return lpRangeOrders
 }
 
 async function prepareRightSideOrder(
