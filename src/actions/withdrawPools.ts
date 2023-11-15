@@ -70,11 +70,12 @@ export async function withdrawSettleLiquidity(
 			orderType: posKey.orderType,
 		})
 
-		// TODO: isn't this promise.all() just a single pool balance request?
+
 		// FIXME: how do we handle failure case here? possible dupe order edge case
 		/*
 		PoolSettings => [ base, quote, oracleAdapter, strike, maturity, isCallPool ]
 		 */
+
 		const [poolSettings, poolBalance] = await Promise.all([
 			pool.getPoolSettings(),
 			pool.balanceOf(lpAddress, tokenId),
@@ -94,7 +95,6 @@ export async function withdrawSettleLiquidity(
 			continue
 		}
 
-		// FIXME: where is the catch block?
 		try {
 			// Use signer from now on, instead of multicall, to execute transactions
 			const executablePool = premia.contracts.getPoolContract(
@@ -114,6 +114,8 @@ export async function withdrawSettleLiquidity(
 			)
 
 			log.info(`Finished withdrawing or settling position.`)
+		}catch(e){
+			//TODO: add catch logic
 		} finally {
 			log.debug(
 				`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`,
@@ -168,8 +170,7 @@ async function withdrawPosition(
 			// { gasLimit: 1400000 },
 		)
 
-		// TODO: would it be better to just use wait() to stay consistent?
-		const confirm = await provider.waitForTransaction(withdrawTx.hash, 1)
+		const confirm = await withdrawTx.wait(1)
 
 		if (confirm?.status == 0) {
 			throw new Error(

@@ -19,14 +19,23 @@ import { delay } from './utils/time'
 import { getSpotPrice } from './utils/prices'
 import { setApproval } from './utils/tokens'
 
+// boolean to set collateral approvals
+let initialized = false
+
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)
 
 	// NOTE: getSpotPrice() returns undefined if multiple attempts fail
-	marketParams[market].spotPrice = await getSpotPrice(market)
+	const curPrice = await getSpotPrice(market)
+
+	if (!curPrice) {
+		log.warning(`Skipping initialization for ${market}, spot price feed is not working`)
+		return lpRangeOrders
+	}
+
+	marketParams[market].spotPrice = curPrice
 	marketParams[market].ts = moment.utc().unix()
 
-	// FIXME: getSuggestedStrikes() wont work if spotPrice is undefined
 	lpRangeOrders = await getExistingPositions(
 		market,
 		marketParams[market].spotPrice!,
@@ -36,7 +45,6 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
 	}
 
-	// FIXME: processStrikes()/getValidStrikes() wont work if spotPrice is undefined
 	lpRangeOrders = await deployLiquidity(
 		lpRangeOrders,
 		market,
@@ -51,11 +59,11 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 
 	const ts = moment.utc().unix() // seconds
 
-	// NOTE: can return undefined after multiple attempts
 	const curPrice = await getSpotPrice(market)
 
 	if (!curPrice) {
-		// TODO: we should give a warning that price feed failed to get price
+		log.warning(`Skipping update cycle for ${market}, spot price feed is not working`)
+		// TODO: it would make sense to pull quotes if there is a chronic price feed failure
 		return lpRangeOrders
 	}
 
@@ -66,7 +74,7 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 	)
 
 	/*
-	It costs ~ $1 total to do a deposit and withdraw (round turn).  We need to optimize
+	NOTE: It costs ~ $1 total to do a deposit and withdraw (round turn).  We need to optimize
 	which range orders we are updating to avoid unnecessary costs.
 	 */
 	// TODO: use theta decay instead of fixed frequency
@@ -109,8 +117,8 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 async function updateMarket(lpRangeOrders: Position[], market: string) {
 	if (!marketParams[market].spotPrice) {
 		/*
-			INITALIZATION CASE: if we have no reference price established for a given market then this is the initial run,
-			so we must get price & ts and deploy all orders
+			INITIALIZATION CASE: if we have no reference price established for a given market then this is the
+			 initial run, so we must get price & ts and deploy all orders
 		*/
 		lpRangeOrders = await initializePositions(lpRangeOrders, market)
 	} else {
@@ -127,8 +135,6 @@ async function updateMarket(lpRangeOrders: Position[], market: string) {
 
 async function runRangeOrderBot() {
 	let lpRangeOrders: Position[] = []
-	let initialized = false
-
 	log.app('Starting range order bot...')
 
 	if (!initialized) {
@@ -158,7 +164,6 @@ async function runRangeOrderBot() {
 
 			log.info(`USDC approval set to MAX`)
 		}
-
 		initialized = true
 	}
 

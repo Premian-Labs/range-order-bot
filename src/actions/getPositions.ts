@@ -47,11 +47,6 @@ async function processMaturity(
 	let maturityTimestamp: number
 
 	try {
-		// FIXME: createExpiration() wont work for dates in the past
-		// TODO: best to create another expiration creator without checks
-		/*
-		ie. validationExpiration() & createExpiration()
-		 */
 		maturityTimestamp = createExpiration(maturityString)
 	} catch {
 		log.error(`Invalid maturity: ${maturityString}`)
@@ -81,8 +76,6 @@ async function processOptionType(
 	lpRangeOrders: Position[],
 ) {
 	// TODO: what comes back if spot price input is undefined?
-	// TODO: what range of strikes does getSuggestedStrikes() return?
-	// FIXME: we need all strikes for a given maturity. How does it know what maturity we are asking for?
 	const strikes = premia.options.getSuggestedStrikes(
 		parseEther(spotPrice.toString()),
 	)

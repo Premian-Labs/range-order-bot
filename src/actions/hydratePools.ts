@@ -101,6 +101,7 @@ export async function processStrikes(
 		spotPrice,
 		marketParams,
 		maturityString,
+		maturityTimestamp,
 		isCall,
 	)
 
@@ -390,7 +391,7 @@ async function processDeposits(
 		return
 	}
 
-	//FIXME: why is setting approval not here (prior to each deposit)?
+	//TODO: why is setting approval not here (prior to each deposit)?
 
 
 	// check to see if we have breached our position limit for RIGHT SIDE orders
@@ -764,9 +765,9 @@ async function depositPosition(
 			depositSize,
 			0n,
 			parseEther('1'),
-			// {
-			// 	gasLimit: 10000000, // Fails to properly estimate gas limit
-			// },
+			{
+				gasLimit: 10000000, // Fails to properly estimate gas limit
+			},
 		)
 
 		const confirm = await depositTx.wait(1)

@@ -3,7 +3,7 @@ import { formatEther, parseEther } from 'ethers'
 import { productionTokenAddr } from '../constants'
 import { maxDelta, minDelta, riskFreeRate } from '../config'
 import { BlackScholes, Option } from '@uqee/black-scholes'
-import { createExpiration, getTTM } from './dates'
+import { getTTM } from './dates'
 import { premia, ivOracle } from '../contracts'
 import { log } from './logs'
 
@@ -14,6 +14,7 @@ export async function getValidStrikes(
 	spotPrice: number,
 	marketParams: MarketParams,
 	maturityString: string,
+	maturityTimestamp: number,
 	isCall: boolean,
 ) {
 	const strikes = isCall
@@ -35,8 +36,6 @@ export async function getValidStrikes(
 		option: Option
 	}[] = []
 
-	// FIXME: we already run createExpiration() within processStrike() which feeds into getValidStrikes()
-	const maturityTimestamp = createExpiration(maturityString)
 	const ttm = getTTM(maturityTimestamp)
 
 	// NOTE: we use a multicallProvider for the ivOracle query
@@ -65,8 +64,6 @@ export async function getValidStrikes(
 			const maxDeltaThreshold = Math.abs(option.delta) > maxDelta
 			const minDeltaThreshold = Math.abs(option.delta) < minDelta
 
-			// FIXME: strikes can be undefined based on first line of function
-			// TODO: what is strikes supposed to be in here? What is it doing?
 			if (strikes && (maxDeltaThreshold || minDeltaThreshold)) {
 				log.warning(
 					`Skipping ${market} ${maturityString} ${isCall ? 'Calls' : 'Puts'}`,
@@ -76,7 +73,8 @@ export async function getValidStrikes(
 				return
 			} else if (maxDeltaThreshold || minDeltaThreshold) {
 				// TODO: need a warning if a market is not being trades for delta range reasons
-				// NOTE: there are a large number of strikes that come back if you use getSuggestedStrikes()
+				// NOTE: there are a large number of non applicable strikes that come back if you use
+				// getSuggestedStrikes() which might make logging excessive.
 				return
 			}
 

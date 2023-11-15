@@ -19,7 +19,6 @@ export async function getSpotPrice(market: string, retry: boolean = true) {
 		await delay(2000)
 
 		if (retry) {
-			// TODO: recursive process
 			return getSpotPrice(market, false)
 		} else {
 			log.warning(
