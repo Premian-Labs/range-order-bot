@@ -33,8 +33,8 @@ export async function deployLiquidity(
 
 	try {
 		for (const maturityString of marketParams[market].maturities) {
-			// TODO: log the maturity (string) incase there is an error we know which one
 			log.info(`Spot Price for ${market}: ${spotPrice}`)
+			log.info(`Processing strikes for ${market}-${maturityString} expiration`)
 
 			// calls
 			lpRangeOrders = await processStrikes(
@@ -311,19 +311,6 @@ async function processAnnihilate(
 
 		try {
 			await annihilatePositions(executablePool, annihilationSizeBigInt)
-			// TODO: what are we grabbing the long/short balance for (not being used)
-			;[longBalance, shortBalance] = await Promise.all([
-				parseFloat(
-					formatEther(
-						await multicallPool.balanceOf(lpAddress!, TokenType.LONG),
-					),
-				),
-				parseFloat(
-					formatEther(
-						await multicallPool.balanceOf(lpAddress!, TokenType.LONG),
-					),
-				),
-			])
 		} catch {
 			log.warning(
 				`Annihilation failed for ${market} ${maturityString}-${strike}-${
@@ -354,7 +341,6 @@ async function processDeposits(
 		? marketParams[market].address
 		: addresses.tokens.USDC
 
-	// TODO: why is this a promise.all multicall for single token balance
 	const token = premia.contracts.getTokenContract(
 		collateralTokenAddr,
 		premia.multicallProvider as any,
@@ -376,11 +362,13 @@ async function processDeposits(
 	// determine deposit capabilities
 	const sufficientCollateral =
 		collateralBalance >= rightSideCollateralAmount + leftSideCollateralAmount
+	// NOTE: if we are using options, then the return value for collateralAmount returns ZERO
 	const rightSideUsesOptions = rightSideCollateralAmount == 0
 	const leftSideUsesOptions = leftSideCollateralAmount == 0
 
-	// NOTE: we will still post single sided markets with options (close only quoting)
-	// If both orders require collateral and there is not enough for either: skip BOTH deposits
+	// NOTE: we will still post single sided markets with options (close only quoting) so even if we have no
+	// collateral but at least one side can use options, we will still post that order.
+	// If BOTH orders require collateral and there is not enough for either: skip BOTH deposits
 	if (
 		!sufficientCollateral &&
 		leftSideCollateralAmount > 0 &&
@@ -395,8 +383,6 @@ async function processDeposits(
 		)
 		return
 	}
-
-	//TODO: why is setting approval not here (prior to each deposit)?
 
 	// check to see if we have breached our position limit for RIGHT SIDE orders
 	if (shortBalance >= marketParams[market].maxExposure) {
@@ -662,6 +648,7 @@ async function depositRangeOrderLiq(
 		posKey.orderType !== OrderType.LONG_COLLATERAL &&
 		posKey.orderType !== OrderType.COLLATERAL_SHORT
 	) {
+		// NOTE: we do not catch this error upstream.
 		throw new Error(`CSUP order types not yet supported: ${posKey.orderType}`)
 	}
 

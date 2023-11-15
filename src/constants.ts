@@ -13,7 +13,6 @@ const { ENV, API_KEY_INFURA, LP_PKEY, LP_ADDRESS } = process.env
 if (!ENV || !API_KEY_INFURA || !LP_ADDRESS || !LP_PKEY)
 	throw new Error('Missing Env Variables')
 
-//TODO: refactor the node provider url
 export const rpcUrl =
 	ENV === 'production'
 		? `https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}`
@@ -28,7 +27,6 @@ export const productionTokenAddr: Record<string, string> = arbAddresses.tokens
 export const volatilityOracle = arbAddresses.core.VolatilityOracleProxy.address
 
 // the iv oracle is only available on arbitrum mainnet
-//TODO: refactor the node provider url
 export const volatilityOracleRpcUrl = `https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}`
 
 export const SECONDS_IN_YEAR = 365 * 24 * 60 * 60

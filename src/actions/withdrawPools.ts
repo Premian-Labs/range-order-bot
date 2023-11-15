@@ -1,5 +1,5 @@
 import isEqual from 'lodash.isequal'
-import { IPool, OrderType, formatTokenId, Pool } from '@premia/v3-sdk'
+import { IPool, OrderType, formatTokenId } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'
 import { lpAddress } from '../constants'
 import { PosKey, Position } from '../types'
@@ -108,7 +108,9 @@ export async function withdrawSettleLiquidity(
 
 			log.info(`Finished withdrawing or settling position.`)
 		} catch (e) {
-			log.warning(`Attempt to withdraw failed: ${JSON.stringify(filteredRangeOrder)}`)
+			log.warning(
+				`Attempt to withdraw failed: ${JSON.stringify(filteredRangeOrder)}`,
+			)
 		} finally {
 			log.debug(
 				`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`,

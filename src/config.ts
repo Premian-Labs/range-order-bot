@@ -41,7 +41,6 @@ range order using the existing positions in an attempt to close them. Limits app
 not collectively.
  */
 
-// TODO: provide a "rule of thumb" deposit size recommendation based on available capital
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,

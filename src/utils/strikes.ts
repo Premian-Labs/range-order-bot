@@ -72,9 +72,11 @@ export async function getValidStrikes(
 				log.warning(`Option out of delta range. Delta: ${option.delta}`)
 				return
 			} else if (maxDeltaThreshold || minDeltaThreshold) {
-				// TODO: need a warning if a market is not being trades for delta range reasons
-				// NOTE: there are a large number of non applicable strikes that come back if you use
-				// getSuggestedStrikes() which might make logging excessive.
+				/*
+				TODO: need a warning if a market is not being traded for delta range reasons
+				NOTE: there are a large number of non applicable strikes that come back if you use
+				getSuggestedStrikes() which might make logging excessive.
+				 */
 				return
 			}
 

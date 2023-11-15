@@ -119,8 +119,8 @@ async function processStrike(
 
 	let poolAddress: string
 
-	// TODO: Why even attempt to get poolAddress if we can calculate it?
 	/*
+	TODO: Why even attempt to get poolAddress if we can calculate it?
 	NOTE: since the strikes might not be valid from getSuggestedStrikes() this will fail and an erroneous
 	poolAddress will end up being calculated.
 	 */
