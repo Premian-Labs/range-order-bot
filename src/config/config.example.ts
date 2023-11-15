@@ -12,7 +12,7 @@ import { LogLevel } from '../utils/logs'
 Log levels can be set to one of the following levels: DEBUG | INFO | WARN | ERROR.  Each level is inclusive
 of the next levels.  For example, if you set to INFO, you will also receive INFO, WARN, & ERROR logs.
  */
-export const logLevel: LogLevel = 'INFO'
+export const logLevel: LogLevel = 'DEBUG'
 
 /*
 These are the designated markets in which to provide liquidity for. Please note that it is
