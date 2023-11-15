@@ -112,7 +112,9 @@ async function processStrike(
 	}
 
 	log.debug(
-		`Checking Balance for: ${maturityString}-${formatEther(strike)}-${isCall ? 'C' : 'P'}`,
+		`Checking Balance for: ${maturityString}-${formatEther(strike)}-${
+			isCall ? 'C' : 'P'
+		}`,
 	)
 
 	let poolAddress: string
@@ -140,7 +142,11 @@ async function processStrike(
 			(tokenId) => tokenId > 2n,
 		)
 	} catch {
-		log.warning(`No balance query for ${market}-${maturityString}-${formatEther(strike)}-${isCall ? 'C' : 'P'}`)
+		log.warning(
+			`No balance query for ${market}-${maturityString}-${formatEther(
+				strike,
+			)}-${isCall ? 'C' : 'P'}`,
+		)
 		return
 	}
 

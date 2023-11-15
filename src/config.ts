@@ -58,7 +58,7 @@ export const marketParams: MarketParams = {
 		putStrikes: [34000, 35000],
 		depositSize: 0.05,
 		maxExposure: 0.1,
-	}
+	},
 }
 
 /*

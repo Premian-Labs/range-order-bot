@@ -1,9 +1,9 @@
 import isEqual from 'lodash.isequal'
-import { IPool, OrderType, formatTokenId } from '@premia/v3-sdk'
+import { IPool, OrderType, formatTokenId, Pool } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'
 import { lpAddress } from '../constants'
 import { PosKey, Position } from '../types'
-import { premia, provider } from '../contracts'
+import { premia } from '../contracts'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
 import moment from 'moment/moment'
@@ -15,12 +15,10 @@ export async function withdrawSettleLiquidity(
 ) {
 	log.app(`Withdrawing liquidity from ${market}`)
 
-	// TODO: Isn't the lpRangOrders array market specific?
 	const filteredRangeOrders = lpRangeOrders.filter((rangeOrder: Position) => {
 		return rangeOrder.market === market
 	})
 
-	// TODO: what scenario does this happen? Manual withdraw between updates?
 	// if there is no withdraw to process
 	if (filteredRangeOrders.length === 0) {
 		log.info(`No existing positions for ${market}`)
@@ -28,8 +26,8 @@ export async function withdrawSettleLiquidity(
 	}
 
 	/*
-		@dev: no point process parallel tx this since we need to wait for each tx to confirm
-		with a better nonce manager, this would not be necessary since withdrawals
+		@dev: no point to process parallel txs since we need to wait for each tx to confirm.
+		With a better nonce manager, this would not be necessary since withdrawals
 		are independent of each other
 	 */
 	for (const filteredRangeOrder of filteredRangeOrders) {
@@ -48,11 +46,6 @@ export async function withdrawSettleLiquidity(
 			`Processing withdraw for: ${JSON.stringify(filteredRangeOrder, null, 4)}`,
 		)
 
-		const pool = premia.contracts.getPoolContract(
-			filteredRangeOrder.poolAddress,
-			premia.multicallProvider as any,
-		)
-
 		//NOTE: Position type (filteredRangeOrder) uses SerializedPosKey type
 		const posKey: PosKey = {
 			owner: filteredRangeOrder.posKey.owner,
@@ -64,18 +57,20 @@ export async function withdrawSettleLiquidity(
 
 		const tokenId = formatTokenId({
 			version: 1,
-			operator: lpAddress!,
+			operator: lpAddress,
 			lower: posKey.lower,
 			upper: posKey.upper,
 			orderType: posKey.orderType,
 		})
 
+		const pool = premia.contracts.getPoolContract(
+			filteredRangeOrder.poolAddress,
+			premia.multicallProvider as any,
+		)
 
-		// FIXME: how do we handle failure case here? possible dupe order edge case
 		/*
-		PoolSettings => [ base, quote, oracleAdapter, strike, maturity, isCallPool ]
+		PoolSettings array => [ base, quote, oracleAdapter, strike, maturity, isCallPool ]
 		 */
-
 		const [poolSettings, poolBalance] = await Promise.all([
 			pool.getPoolSettings(),
 			pool.balanceOf(lpAddress, tokenId),
@@ -102,10 +97,8 @@ export async function withdrawSettleLiquidity(
 				premia.signer as any,
 			)
 
-			// If pool expired attempt to settle position and ignore withdraw attempt
 			const exp = Number(poolSettings[4])
 
-			// TODO: what is the catch block if this throws We do not want to remove from lpRangeOrders?
 			await withdrawPosition(executablePool, posKey, poolBalance, exp)
 
 			// remove range order from array if settlement is successful
@@ -114,8 +107,8 @@ export async function withdrawSettleLiquidity(
 			)
 
 			log.info(`Finished withdrawing or settling position.`)
-		}catch(e){
-			//TODO: add catch logic
+		} catch (e) {
+			log.warning(`Attempt to withdraw failed: ${JSON.stringify(filteredRangeOrder)}`)
 		} finally {
 			log.debug(
 				`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`,
@@ -133,6 +126,7 @@ async function withdrawPosition(
 	exp: number,
 	retry: boolean = true,
 ) {
+	// If pool expired attempt to settle position and ignore withdraw attempt
 	if (exp < moment.utc().unix()) {
 		log.info(`Pool expired. Settling position instead...`)
 
@@ -141,14 +135,13 @@ async function withdrawPosition(
 			const confirm = await settlePositionTx.wait(1)
 
 			if (confirm?.status == 0) {
-				log.warning(`No settlement of LP Range Order`)
-				log.warning(confirm)
-				// FIXME: if we just terminate here, it appears we remove the position from lpRangeOrders next
-				// TODO: shouldn't we throw here instead?
-				return
+				throw new Error(
+					`Failed to confirm settlement of LP Range Order ${confirm}`,
+				)
 			}
 
 			log.info(`LP Range Order settlement confirmed.`)
+			return
 		} catch (err) {
 			await delay(2000)
 
@@ -167,7 +160,7 @@ async function withdrawPosition(
 			poolBalance.toString(),
 			0,
 			parseEther('1'),
-			// { gasLimit: 1400000 },
+			{ gasLimit: 1400000 },
 		)
 
 		const confirm = await withdrawTx.wait(1)

@@ -125,7 +125,9 @@ export async function processStrikes(
 		let [marketPrice, longBalance, shortBalance] = await Promise.all([
 			parseFloat(formatEther(await multicallPool.marketPrice())),
 
-			parseFloat(formatEther(await multicallPool.balanceOf(lpAddress!, TokenType.LONG))),
+			parseFloat(
+				formatEther(await multicallPool.balanceOf(lpAddress!, TokenType.LONG)),
+			),
 			parseFloat(
 				formatEther(await multicallPool.balanceOf(lpAddress!, TokenType.SHORT)),
 			),
@@ -308,14 +310,18 @@ async function processAnnihilate(
 		log.info(`Annihilating ${annihilationSize} contracts..`)
 
 		try {
-			await annihilatePositions(executablePool, annihilationSizeBigInt);
+			await annihilatePositions(executablePool, annihilationSizeBigInt)
 			// TODO: what are we grabbing the long/short balance for (not being used)
-			[longBalance, shortBalance] = await Promise.all([
+			;[longBalance, shortBalance] = await Promise.all([
 				parseFloat(
-					formatEther(await multicallPool.balanceOf(lpAddress!, TokenType.LONG)),
+					formatEther(
+						await multicallPool.balanceOf(lpAddress!, TokenType.LONG),
+					),
 				),
 				parseFloat(
-					formatEther(await multicallPool.balanceOf(lpAddress!, TokenType.LONG)),
+					formatEther(
+						await multicallPool.balanceOf(lpAddress!, TokenType.LONG),
+					),
 				),
 			])
 		} catch {
@@ -347,7 +353,6 @@ async function processDeposits(
 	const collateralTokenAddr = isCall
 		? marketParams[market].address
 		: addresses.tokens.USDC
-
 
 	// TODO: why is this a promise.all multicall for single token balance
 	const token = premia.contracts.getTokenContract(
@@ -392,7 +397,6 @@ async function processDeposits(
 	}
 
 	//TODO: why is setting approval not here (prior to each deposit)?
-
 
 	// check to see if we have breached our position limit for RIGHT SIDE orders
 	if (shortBalance >= marketParams[market].maxExposure) {

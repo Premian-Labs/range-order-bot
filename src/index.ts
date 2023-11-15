@@ -29,7 +29,9 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	const curPrice = await getSpotPrice(market)
 
 	if (!curPrice) {
-		log.warning(`Skipping initialization for ${market}, spot price feed is not working`)
+		log.warning(
+			`Skipping initialization for ${market}, spot price feed is not working`,
+		)
 		return lpRangeOrders
 	}
 
@@ -37,20 +39,13 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	marketParams[market].spotPrice = curPrice
 	marketParams[market].ts = moment.utc().unix()
 
-	lpRangeOrders = await getExistingPositions(
-		market,
-		curPrice,
-	)
+	lpRangeOrders = await getExistingPositions(market, curPrice)
 
 	if (withdrawExistingPositions && lpRangeOrders.length > 0) {
 		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
 	}
 
-	lpRangeOrders = await deployLiquidity(
-		lpRangeOrders,
-		market,
-		curPrice,
-	)
+	lpRangeOrders = await deployLiquidity(lpRangeOrders, market, curPrice)
 
 	return lpRangeOrders
 }
@@ -63,7 +58,9 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 	const curPrice = await getSpotPrice(market)
 
 	if (!curPrice) {
-		log.warning(`Skipping update cycle for ${market}, spot price feed is not working`)
+		log.warning(
+			`Skipping update cycle for ${market}, spot price feed is not working`,
+		)
 		// TODO: it would make sense to pull quotes if there is a chronic price feed failure
 		return lpRangeOrders
 	}
