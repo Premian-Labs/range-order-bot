@@ -23,7 +23,7 @@ There are a couple of things that are needed in order to work with the range ord
 - An EOA (Externally Owned Account) on Ethereum (funded on _Arbitrum_) with a wallet provider such as [Metamask](https://metamask.io/)
 - The repository is written in Typescript and thus requires [Node](https://nodejs.org/en/download) to be installed
 - An API Key from [Infura](https://www.infura.io/). If you would like to use a different provider, the `rpcurl`
-  needs to be adjusted within `constants.ts`.
+  needs to be adjusted within `src/config/constants.ts`.
 - An understanding of range orders and how concentrated liquidity works on Premia v3. If you have not done so please
   see our docs on [Range Orders](https://docs.premia)
 
@@ -57,12 +57,11 @@ is familiar with how range orders work, and the risks associated with owning opt
 ## Quick Start
 
 1. Clone the repository on a local computer.
-2. While in the root directory, run `yarn install` to install package dependencies (this will also generate a
-   `typechain` folder).
+2. While in the root directory, run `yarn install` to install package dependencies.
 3. Create a `.env` file using the same format at the example and add necessary information. Note that ENV should
    either be `development` or `production`.
-4. Navigate to `src/config/liquiditySettings.ts` and review each and ever setting. Instructions & descriptions of
-   settings are provided in the file.
+4. Navigate to `src/config/config.example.ts` and review each and ever setting. Create a new file called 
+   `config.ts` to populate custom settings. Instructions & descriptions of settings are provided in the example file.
 5. Run `yarn start` in the command line to run the range order bot.
 
 ## Improvement List & Changelog
@@ -70,6 +69,5 @@ is familiar with how range orders work, and the risks associated with owning opt
 - [x] make minOptionPrice per market for better granular control
 - [x] convert timeThresholdMin into hours
 - [x] ignore liquidity settings to avoid loss of trade setting on repo updates
-- [ ] add check to ensure total LP range orders are not duped
 - [ ] add delta and theta based lp range updates for more efficient updating
 - [ ] remove npm token requirement on SDK 
