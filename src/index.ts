@@ -23,6 +23,7 @@ import { setApproval } from './utils/tokens'
 
 let initialized = false
 let lpRangeOrders: Position[] = []
+let spotPriceFailure: false
 
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)
@@ -41,6 +42,8 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	marketParams[market].spotPrice = curPrice
 	marketParams[market].ts = moment.utc().unix()
 
+	// NOTE: only needed once to hydrate lpRangeOrders
+	// TODO: curPrice only used for getSuggestedStrikes()
 	lpRangeOrders = await getExistingPositions(market, curPrice)
 
 	if (withdrawExistingPositions && lpRangeOrders.length > 0) {
@@ -61,14 +64,14 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 
 	if (!curPrice) {
 		log.warning(
-			`Skipping update cycle for ${market}, spot price feed is not working`,
+			`Cannot get ${market} spot price, withdrawing range orders if any exist`,
 		)
-		// TODO: it would make sense to pull quotes if there is a chronic price feed failure
+		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
 		return lpRangeOrders
 	}
 
 	log.info(
-		'Updated spot price: ',
+		`Updating spot price for ${market}: `,
 		curPrice,
 		moment.utc().format('YYYY-MM-HH:mm:ss'),
 	)
