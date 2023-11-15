@@ -75,7 +75,7 @@ async function processOptionType(
 	maturityTimestamp: number,
 	lpRangeOrders: Position[],
 ) {
-	// TODO: what comes back if spot price input is undefined?
+	// FIXME: these may return invalid strikes
 	const strikes = premia.options.getSuggestedStrikes(
 		parseEther(spotPrice.toString()),
 	)
@@ -112,12 +112,16 @@ async function processStrike(
 	}
 
 	log.debug(
-		`Checking: ${maturityString}-${formatEther(strike)}-${isCall ? 'C' : 'P'}`,
+		`Checking Balance for: ${maturityString}-${formatEther(strike)}-${isCall ? 'C' : 'P'}`,
 	)
 
 	let poolAddress: string
 
 	// TODO: Why even attempt to get poolAddress if we can calculate it?
+	/*
+	NOTE: since the strikes might not be valid from getSuggestedStrikes() this will fail and an erroneous
+	poolAddress will end up being calculated.
+	 */
 	try {
 		poolAddress = await premia.pools.getPoolAddress(poolKey)
 	} catch {
@@ -136,7 +140,7 @@ async function processStrike(
 			(tokenId) => tokenId > 2n,
 		)
 	} catch {
-		//TODO: should we be logging this as an issue (make note of which market)?
+		log.warning(`No balance query for ${market}-${maturityString}-${formatEther(strike)}-${isCall ? 'C' : 'P'}`)
 		return
 	}
 

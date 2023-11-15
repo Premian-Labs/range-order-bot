@@ -19,8 +19,8 @@ import { delay } from './utils/time'
 import { getSpotPrice } from './utils/prices'
 import { setApproval } from './utils/tokens'
 
-// boolean to set collateral approvals
 let initialized = false
+let lpRangeOrders: Position[] = []
 
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)
@@ -33,12 +33,13 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 		return lpRangeOrders
 	}
 
+	// store latest price update
 	marketParams[market].spotPrice = curPrice
 	marketParams[market].ts = moment.utc().unix()
 
 	lpRangeOrders = await getExistingPositions(
 		market,
-		marketParams[market].spotPrice!,
+		curPrice,
 	)
 
 	if (withdrawExistingPositions && lpRangeOrders.length > 0) {
@@ -48,7 +49,7 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	lpRangeOrders = await deployLiquidity(
 		lpRangeOrders,
 		market,
-		marketParams[market].spotPrice!,
+		curPrice,
 	)
 
 	return lpRangeOrders
@@ -134,7 +135,6 @@ async function updateMarket(lpRangeOrders: Position[], market: string) {
 }
 
 async function runRangeOrderBot() {
-	let lpRangeOrders: Position[] = []
 	log.app('Starting range order bot...')
 
 	if (!initialized) {
