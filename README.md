@@ -36,7 +36,7 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 <div align="center">
 
 | Token Symbol | Arbitrum Goerli (Development) | Arbitrum (Production) |
-| :----------: | :---------------------------: | :-------------------: |
+|:------------:|:-----------------------------:|:---------------------:|
 |     WETH     |      :heavy_check_mark:       |  :heavy_check_mark:   |
 |     WBTC     |      :heavy_check_mark:       |  :heavy_check_mark:   |
 |     ARB      |                               |  :heavy_check_mark:   |
