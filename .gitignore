@@ -3,5 +3,5 @@
 node_modules
 yarn.lock
 dist
-./src/config.ts
+src/config/config.ts
 .npmrc

@@ -1,7 +1,7 @@
 import { OrderType } from '@premia/v3-sdk'
 import { formatEther } from 'ethers'
-import { VALID_ORDER_WIDTHS } from '../constants'
-import { PosKey } from '../types'
+import { VALID_ORDER_WIDTHS } from '../config/constants'
+import { PosKey } from './types'
 import { log } from './logs'
 
 export async function getCollateralApprovalAmount(

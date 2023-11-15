@@ -1,6 +1,6 @@
-import {PosKey, Position, MarketParams} from '../types'
+import {PosKey, Position, MarketParams} from '../utils/types'
 import { formatEther, parseEther, formatUnits, parseUnits } from 'ethers'
-import { lpAddress, addresses } from '../constants'
+import { lpAddress, addresses } from '../config/constants'
 import {
 	autoDeploy,
 	defaultSpread,
@@ -9,17 +9,17 @@ import {
 	minAnnihilationSize,
 	minDTE,
 	rangeWidthMultiplier,
-} from '../config'
+} from '../config/config'
 import { IPool, OrderType, PoolKey, TokenType } from '@premia/v3-sdk'
 import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
 import { setApproval } from '../utils/tokens'
-import { premia, signerAddress, poolFactory } from '../contracts'
+import { premia, signerAddress, poolFactory } from '../config/contracts'
 import { getValidStrikes } from '../utils/strikes'
 import {
 	getCollateralApprovalAmount,
 	getValidRangeWidth,
 } from '../utils/rangeOrders'
-import { marketParams } from '../config'
+import { marketParams } from '../config/config'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
 

@@ -72,3 +72,4 @@ is familiar with how range orders work, and the risks associated with owning opt
 - [x] ignore liquidity settings to avoid loss of trade setting on repo updates
 - [ ] add check to ensure total LP range orders are not duped
 - [ ] add delta and theta based lp range updates for more efficient updating
+- [ ] remove npm token requirement on SDK 

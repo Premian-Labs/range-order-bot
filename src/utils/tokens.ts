@@ -5,10 +5,10 @@ import {
 	TokenIdParams,
 } from '@premia/v3-sdk'
 import { MaxUint256, getAddress } from 'ethers'
-import { addresses } from '../constants'
+import { addresses } from '../config/constants'
 import { delay } from './time'
 import { log } from './logs'
-import { signerAddress } from '../contracts'
+import { signerAddress } from '../config/contracts'
 
 export async function setApproval(
 	collateralValue: bigint,

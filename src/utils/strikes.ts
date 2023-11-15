@@ -1,10 +1,10 @@
-import { MarketParams } from '../types'
+import { MarketParams } from './types'
 import { formatEther, parseEther } from 'ethers'
-import { productionTokenAddr } from '../constants'
-import { maxDelta, minDelta, riskFreeRate } from '../config'
+import { productionTokenAddr } from '../config/constants'
+import { maxDelta, minDelta, riskFreeRate } from '../config/config'
 import { BlackScholes, Option } from '@uqee/black-scholes'
 import { getTTM } from './dates'
-import { premia, ivOracle } from '../contracts'
+import { premia, ivOracle } from '../config/contracts'
 import { log } from './logs'
 
 const blackScholes: BlackScholes = new BlackScholes()

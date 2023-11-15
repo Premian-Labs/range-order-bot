@@ -1,5 +1,5 @@
 import moment from 'moment'
-import { SECONDS_IN_YEAR } from '../constants'
+import { SECONDS_IN_YEAR } from '../config/constants'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 

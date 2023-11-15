@@ -1,4 +1,4 @@
-import { logLevel } from '../config'
+import { logLevel } from '../config/config'
 // TODO: what about APP loglevel?
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 

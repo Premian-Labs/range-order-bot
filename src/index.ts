@@ -8,12 +8,12 @@ import {
 	timeThresholdHrs,
 	withdrawExistingPositions,
 	maxCollateralApproved,
-} from './config'
-import { addresses } from './constants'
-import { Position } from './types'
+} from './config/config'
+import { addresses } from './config/constants'
+import { Position } from './utils/types'
 import { getExistingPositions } from './actions/getPositions'
 import { deployLiquidity } from './actions/hydratePools'
-import { premia } from './contracts'
+import { premia } from './config/contracts'
 import { log } from './utils/logs'
 import { delay } from './utils/time'
 import { getSpotPrice } from './utils/prices'

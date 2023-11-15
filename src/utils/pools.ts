@@ -1,6 +1,6 @@
 import { keccak256, AbiCoder, solidityPacked } from 'ethers'
 import { PoolKey } from '@premia/v3-sdk'
-import { addresses } from '../constants'
+import { addresses } from '../config/constants'
 
 const defaultAbiCoder = new AbiCoder()
 

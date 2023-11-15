@@ -2,9 +2,9 @@
 NOTE: Trade related settings may need to be tweaked from time to time depending on risk,
 market conditions, and changes in available strikes/expirations
  */
-import { MarketParams } from './types'
+import { MarketParams } from '../utils/types'
 import { addresses } from './constants'
-import { LogLevel } from './utils/logs'
+import { LogLevel } from '../utils/logs'
 
 /*
 Log levels can be set to one of the following levels: DEBUG | INFO | WARN | ERROR.  Each level is inclusive
