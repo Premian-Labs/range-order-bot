@@ -20,8 +20,6 @@ export async function getValidStrikes(
 		? marketParams[market].callStrikes
 		: marketParams[market].putStrikes
 
-	// TODO: what does getSuggestedStrikes return exactly?
-	// FIXME: how is suggestedStrikes limited
 	/*
 	getSuggestedStrike() =>  will look for valid strikes from (.5 * spot) to (2 * spot) using
 	our algorithmic logic for valid strike intervals.

@@ -33,7 +33,7 @@ export async function deployLiquidity(
 
 	try {
 		for (const maturityString of marketParams[market].maturities) {
-			// TODO: log the maturity incase there is an error we know which one
+			// TODO: log the maturity (string) incase there is an error we know which one
 			log.info(`Spot Price for ${market}: ${spotPrice}`)
 
 			// calls
@@ -116,22 +116,23 @@ export async function processStrikes(
 			isCall,
 		)
 
+		// NOTE: if null, we are skipping the strike due to param checks in fetchOrDeployPool()
 		if (!fetchedPoolInfo) continue
 
-		const { pool, executablePool, poolAddress } = fetchedPoolInfo
+		const { multicallPool, executablePool, poolAddress } = fetchedPoolInfo
 
 		let [marketPrice, longBalance, shortBalance] = await Promise.all([
-			parseFloat(formatEther(await pool.marketPrice())),
+			parseFloat(formatEther(await multicallPool.marketPrice())),
 
-			parseFloat(formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG))),
+			parseFloat(formatEther(await multicallPool.balanceOf(lpAddress!, TokenType.LONG))),
 			parseFloat(
-				formatEther(await pool.balanceOf(lpAddress!, TokenType.SHORT)),
+				formatEther(await multicallPool.balanceOf(lpAddress!, TokenType.SHORT)),
 			),
 		])
 
 		// check to see if we have positions that can be annihilated
 		await processAnnihilate(
-			pool,
+			multicallPool,
 			executablePool,
 			market,
 			maturityString,
@@ -165,6 +166,7 @@ export async function processStrikes(
 		/*
 			NOTE: for LEFT SIDE orders if market price < option price than we use market price due
 			to issues with crossing markets with range orders (which cause the range order to fail)
+			leftPosKey is null when the minOptionPrice config threshold is breached
  		*/
 
 		const { leftPosKey, leftSideCollateralAmount } = await prepareLeftSideOrder(
@@ -179,12 +181,11 @@ export async function processStrikes(
 
 		/*
 			NOTE: once the deposits are queued up, we need to do quality control checks to make sure that
-			we are not breaching any limits (ie. max exposure or low account collateral balance)
+			we are not breaching any limits (ie max exposure or low account collateral balance)
 		*/
 
 		await processDeposits(
 			lpRangeOrders,
-			pool,
 			executablePool,
 			poolAddress,
 			market,
@@ -274,7 +275,7 @@ async function fetchOrDeployPool(
 		}
 	}
 
-	const pool = premia.contracts.getPoolContract(
+	const multicallPool = premia.contracts.getPoolContract(
 		poolAddress,
 		premia.multicallProvider as any,
 	)
@@ -285,11 +286,11 @@ async function fetchOrDeployPool(
 		premia.signer as any,
 	)
 
-	return { pool, executablePool, poolAddress }
+	return { multicallPool, executablePool, poolAddress }
 }
 
 async function processAnnihilate(
-	pool: IPool,
+	multicallPool: IPool,
 	executablePool: IPool,
 	market: string,
 	maturityString: string,
@@ -306,13 +307,14 @@ async function processAnnihilate(
 		log.info(`Annihilating ${annihilationSize} contracts..`)
 
 		try {
-			await annihilatePositions(executablePool, annihilationSizeBigInt)
-			;[longBalance, shortBalance] = await Promise.all([
+			await annihilatePositions(executablePool, annihilationSizeBigInt);
+			// TODO: what are we grabbing the long/short balance for (not being used)
+			[longBalance, shortBalance] = await Promise.all([
 				parseFloat(
-					formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG)),
+					formatEther(await multicallPool.balanceOf(lpAddress!, TokenType.LONG)),
 				),
 				parseFloat(
-					formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG)),
+					formatEther(await multicallPool.balanceOf(lpAddress!, TokenType.LONG)),
 				),
 			])
 		} catch {
@@ -327,7 +329,6 @@ async function processAnnihilate(
 
 async function processDeposits(
 	lpRangeOrders: Position[],
-	pool: IPool,
 	executablePool: IPool,
 	poolAddress: string,
 	market: string,
@@ -346,14 +347,18 @@ async function processDeposits(
 		? marketParams[market].address
 		: addresses.tokens.USDC
 
+
+	// TODO: why is this a promise.all multicall for single token balance
 	const token = premia.contracts.getTokenContract(
 		collateralTokenAddr,
 		premia.multicallProvider as any,
 	)
+
 	const [decimals, collateralValue] = await Promise.all([
 		Number(await token.decimals()),
-		token.balanceOf(lpAddress!),
+		token.balanceOf(lpAddress),
 	])
+
 	const collateralBalance = parseFloat(formatUnits(collateralValue, decimals))
 
 	log.info(
@@ -385,6 +390,9 @@ async function processDeposits(
 		return
 	}
 
+	//FIXME: why is setting approval not here (prior to each deposit)?
+
+
 	// check to see if we have breached our position limit for RIGHT SIDE orders
 	if (shortBalance >= marketParams[market].maxExposure) {
 		log.warning('Max SHORT exposure reached, no RIGHT SIDE order placed..')
@@ -393,7 +401,6 @@ async function processDeposits(
 		// RIGHT SIDE ORDER
 		lpRangeOrders = await depositRangeOrderLiq(
 			market,
-			pool,
 			executablePool,
 			poolAddress,
 			strike,
@@ -416,7 +423,6 @@ async function processDeposits(
 		// LEFT SIDE ORDER
 		lpRangeOrders = await depositRangeOrderLiq(
 			market,
-			pool,
 			executablePool,
 			poolAddress,
 			strike,
@@ -635,7 +641,6 @@ async function annihilatePositions(
 
 async function depositRangeOrderLiq(
 	market: string,
-	pool: IPool,
 	executablePool: IPool,
 	poolAddress: string,
 	strike: number,
@@ -662,7 +667,7 @@ async function depositRangeOrderLiq(
 			premia.signer as any,
 		)
 
-		const nearestBelow = await pool.getNearestTicksBelow(
+		const nearestBelow = await executablePool.getNearestTicksBelow(
 			posKey.lower,
 			posKey.upper,
 		)
@@ -671,7 +676,7 @@ async function depositRangeOrderLiq(
 		NOTE: below covers the cases in which we are doing a deposit, but it is with
 		collateral and not options. If it is with options, then we do not need any
 		approvals for options to be deposited.
-	*/
+		*/
 
 		const approvalRequired =
 			(posKey.orderType == OrderType.LONG_COLLATERAL && isLeftSide) ||

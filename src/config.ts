@@ -20,6 +20,12 @@ All these settings/thresholds can be found below marketParam configuration.
 markets (required): There MUST be an IV oracle/surface for each market.  Please see the README for available
 markets. Any markets that is not intended to be traded should be completely removed from marketParams.
 
+address (required): Using addresses.tokens.{INSERT TOKEN SYMBOL} will add the token address for the given market. If
+the market is not available, it will not populate.  Please see the README for available markets.
+
+maturities (required): All expirations to trade.  Invalid dates will be rejects and throw warnings while bot is
+running.  Any options that have expired or expire while the bot is running will automatically exercise/settle positions.
+
 strikes (optional): a user can input specific strikes that they would like to trade.  Optionally, if they would like
 to trade all applicable markets (within a delta range), both callSTrikes and putStrikes can be COMPLETELY removed.
 In this case the bot will depend on the min/max delta range as the limiting factors and the bot will trade
@@ -35,8 +41,7 @@ range order using the existing positions in an attempt to close them. Limits app
 not collectively.
  */
 
-// TODO: do we want wstETH market in here since we are adding all available markets?
-// TODO: provide a "rule of thumb" deposit size based on available capital
+// TODO: provide a "rule of thumb" deposit size recommendation based on available capital
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,
@@ -53,36 +58,7 @@ export const marketParams: MarketParams = {
 		putStrikes: [34000, 35000],
 		depositSize: 0.05,
 		maxExposure: 0.1,
-	},
-	ARB: {
-		address: (addresses.tokens as typeof productionTokenAddr).ARB,
-		maturities: ['17NOV23', '24NOV23'],
-		callStrikes: [0.8, 0.9, 1, 1.1, 1.2],
-		putStrikes: [0.5, 0.6, 0.7, 0.8, 0.9],
-		depositSize: 2500,
-		maxExposure: 5000,
-	},
-
-	MAGIC: {
-		address: (addresses.tokens as typeof productionTokenAddr).MAGIC,
-		maturities: ['17NOV23', '24NOV23', '01DEC23', '08DEC23'],
-		depositSize: 100,
-		maxExposure: 1000,
-	},
-
-	GMX: {
-		address: (addresses.tokens as typeof productionTokenAddr).GMX,
-		maturities: ['17NOV23', '24NOV23', '01DEC23', '08DEC23'],
-		depositSize: 10,
-		maxExposure: 100,
-	},
-
-	LINK: {
-		address: (addresses.tokens as typeof productionTokenAddr).LINK,
-		maturities: ['17NOV23', '24NOV23', '01DEC23', '08DEC23'],
-		depositSize: 10,
-		maxExposure: 100,
-	},
+	}
 }
 
 /*

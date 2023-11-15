@@ -44,7 +44,6 @@ export async function setApproval(
 	} catch (err) {
 		await delay(2000)
 		if (retry) {
-			// TODO: why do a recursive pattern? Seems OK here, but not a robust pattern.
 			return setApproval(collateralValue, token, false)
 		} else {
 			log.error(
