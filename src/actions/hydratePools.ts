@@ -1,4 +1,4 @@
-import { PosKey, Position, MarketParams } from '../types'
+import {PosKey, Position, MarketParams} from '../types'
 import { formatEther, parseEther, formatUnits, parseUnits } from 'ethers'
 import { lpAddress, addresses } from '../constants'
 import {
@@ -8,7 +8,6 @@ import {
 	maxDeploymentFee,
 	minAnnihilationSize,
 	minDTE,
-	minOptionPrice,
 	rangeWidthMultiplier,
 } from '../config'
 import { IPool, OrderType, PoolKey, TokenType } from '@premia/v3-sdk'
@@ -172,6 +171,7 @@ export async function processStrikes(
  		*/
 
 		const { leftPosKey, leftSideCollateralAmount } = await prepareLeftSideOrder(
+			marketParams,
 			market,
 			maturityString,
 			strike,
@@ -182,8 +182,8 @@ export async function processStrikes(
 		)
 
 		/*
-			NOTE: once the deposits are queued up, we need to do quality control checks to make sure that
-			we are not breaching any limits (ie max exposure or low account collateral balance)
+		NOTE: once the deposits are queued up, we need to do quality control checks to make sure that
+		we are not breaching any limits (ie max exposure or low account collateral balance)
 		*/
 
 		lpRangeOrders = await processDeposits(
@@ -488,6 +488,7 @@ async function prepareRightSideOrder(
 }
 
 async function prepareLeftSideOrder(
+	marketParams: MarketParams,
 	market: string,
 	maturityString: string,
 	strike: number,
@@ -503,7 +504,7 @@ async function prepareLeftSideOrder(
 	let leftPosKey: PosKey | undefined
 
 	// If price is too low, we want to skip this section (we will not post LEFT side order)
-	if (leftRefPrice > minOptionPrice) {
+	if (leftRefPrice > marketParams[market].minOptionPrice) {
 		const marketPriceLower =
 			Math.floor((leftRefPrice * (1 - defaultSpread) - 0.001) * 1000) / 1000
 		const targetLowerTick =

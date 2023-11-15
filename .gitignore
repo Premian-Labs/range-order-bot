@@ -3,6 +3,5 @@
 node_modules
 yarn.lock
 dist
-abi
-typechain
+./src/config.ts
 .npmrc

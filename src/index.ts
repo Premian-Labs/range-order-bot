@@ -5,7 +5,7 @@ import {
 	marketParams,
 	spotMoveThreshold,
 	refreshRate,
-	timeThresholdMin,
+	timeThresholdHrs,
 	withdrawExistingPositions,
 	maxCollateralApproved,
 } from './config'
@@ -82,7 +82,7 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 	const refPrice = marketParams[market].spotPrice!
 	const abovePriceThresh = curPrice > refPrice * (1 + spotMoveThreshold)
 	const belowPriceThresh = curPrice < refPrice * (1 - spotMoveThreshold)
-	const pastTimeThresh = ts - timeThresholdMin * 60 > marketParams[market].ts!
+	const pastTimeThresh = ts - timeThresholdHrs * 60 * 60 > marketParams[market].ts!
 
 	// force update if a threshold is reached
 	if (abovePriceThresh || belowPriceThresh || pastTimeThresh) {

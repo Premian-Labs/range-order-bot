@@ -67,8 +67,8 @@ is familiar with how range orders work, and the risks associated with owning opt
 
 ## Improvement List & Changelog
 
-- [ ] make minOptionPrice per market for better granular control
-- [ ] convert timeThresholdMin into hours
-- [ ] refactor base token address out of marketParams (not a trade setting)
-- [ ] ignore liquidity settings to avoid loss of trade setting on repo updates
+- [x] make minOptionPrice per market for better granular control
+- [x] convert timeThresholdMin into hours
+- [x] ignore liquidity settings to avoid loss of trade setting on repo updates
 - [ ] add check to ensure total LP range orders are not duped
+- [ ] add delta and theta based lp range updates for more efficient updating
