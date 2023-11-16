@@ -10,7 +10,7 @@ import {
 	timeThresholdHrs,
 	withdrawExistingPositions,
 	maxCollateralApproved,
-} from './config/config'
+} from './config'
 import { addresses } from './config/constants'
 import { Position } from './utils/types'
 import { getExistingPositions } from './actions/getPositions'
