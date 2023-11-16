@@ -3,5 +3,7 @@
 node_modules
 yarn.lock
 dist
-src/config/config.ts
 .npmrc
+
+src/config/index.ts
+typechain

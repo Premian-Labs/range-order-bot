@@ -1,6 +1,6 @@
 import { formatEther } from 'ethers'
 import { chainlink } from '../config/contracts'
-import { marketParams } from '../config/config'
+import { marketParams } from '../config'
 import { addresses } from '../config/constants'
 import { delay } from './time'
 import { log } from './logs'

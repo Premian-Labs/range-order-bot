@@ -1,4 +1,4 @@
-import { logLevel } from '../config/config'
+import { logLevel } from '../config'
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
 

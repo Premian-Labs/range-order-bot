@@ -1,11 +1,12 @@
 import { MarketParams } from './types'
-import { formatEther, parseEther } from 'ethers'
+import { BigNumberish, formatEther, parseEther, toBigInt } from 'ethers'
 import { productionTokenAddr } from '../config/constants'
-import { maxDelta, minDelta, riskFreeRate } from '../config/config'
+import { maxDelta, minDelta, riskFreeRate } from '../config'
 import { BlackScholes, Option } from '@uqee/black-scholes'
 import { getTTM } from './dates'
-import { premia, ivOracle } from '../config/contracts'
+import { ivOracle } from '../config/contracts'
 import { log } from './logs'
+import { WAD_DECIMALS, ZERO_BI, parseNumber } from '@premia/v3-sdk'
 
 const blackScholes: BlackScholes = new BlackScholes()
 
@@ -27,9 +28,9 @@ export async function getValidStrikes(
 	 */
 	const suggestedStrikes =
 		strikes ??
-		premia.options
-			.getSuggestedStrikes(parseEther(spotPrice.toString()))
-			.map((strike) => Number(formatEther(strike)))
+		getSurroundingStrikes(parseEther(spotPrice.toString())).map((strike) =>
+			Number(formatEther(strike)),
+		)
 
 	const validStrikes: {
 		strike: number
@@ -92,4 +93,75 @@ export async function getValidStrikes(
 	)
 
 	return validStrikes
+}
+
+export function getSurroundingStrikes(
+	spotPrice: BigNumberish,
+	decimals: number | bigint = WAD_DECIMALS,
+): bigint[] {
+	const _decimals = Number(decimals)
+	const _spotPrice = toBigInt(spotPrice)
+
+	let increment = getStrikeIncrementBelow(spotPrice, _decimals)
+
+	if (increment === ZERO_BI) {
+		return []
+	}
+
+	const maxProportion = 2n
+
+	const minStrike = _spotPrice / maxProportion
+	const maxStrike = _spotPrice * maxProportion
+
+	let minStrikeRounded = roundToNearest(minStrike, increment)
+	let maxStrikeRounded = roundToNearest(maxStrike, increment)
+
+	if (minStrikeRounded > minStrike) {
+		minStrikeRounded -= increment
+	}
+
+	if (maxStrikeRounded < maxStrike) {
+		maxStrikeRounded += increment
+	}
+
+	const strikes = []
+	for (let i = minStrikeRounded; i <= maxStrikeRounded; i += increment) {
+		strikes.push(i)
+	}
+
+	return strikes
+}
+
+function getStrikeIncrementBelow(
+	spotPrice: BigNumberish,
+	decimals: number = Number(WAD_DECIMALS),
+): bigint {
+	const price = parseNumber(spotPrice, decimals)
+	let exponent = Math.floor(Math.log10(price))
+	const multiplier = price >= 5 * 10 ** exponent ? 1 : 5
+
+	if (multiplier === 5) {
+		exponent -= 1
+	}
+
+	if (exponent - 1 < 0) {
+		return (
+			(toBigInt(multiplier) * toBigInt(10) ** toBigInt(decimals)) /
+			toBigInt(10) ** toBigInt(Math.abs(exponent - 1))
+		)
+	}
+
+	return (
+		toBigInt(multiplier) *
+		toBigInt(10) ** toBigInt(decimals) *
+		toBigInt(10) ** toBigInt(exponent - 1)
+	)
+}
+
+function roundToNearest(value: bigint, nearest: bigint): bigint {
+	if (nearest === ZERO_BI) {
+		return value
+	}
+
+	return (value / nearest) * nearest
 }

@@ -10,7 +10,7 @@ import {
 	timeThresholdHrs,
 	withdrawExistingPositions,
 	maxCollateralApproved,
-} from './config/config'
+} from './config'
 import { addresses } from './config/constants'
 import { Position } from './utils/types'
 import { getExistingPositions } from './actions/getPositions'
@@ -23,12 +23,13 @@ import { setApproval } from './utils/tokens'
 
 let initialized = false
 let lpRangeOrders: Position[] = []
-let spotPriceFailure: false
+let spotPriceFailure: false // TODO: is this going to be used?
 
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)
 
 	// NOTE: getSpotPrice() returns undefined if multiple attempts fail
+	// TODO: potentially use coingecko API price if chainlink oracle fails
 	const curPrice = await getSpotPrice(market)
 
 	if (!curPrice) {
@@ -38,12 +39,11 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 		return lpRangeOrders
 	}
 
-	// store latest price update
 	marketParams[market].spotPrice = curPrice
 	marketParams[market].ts = moment.utc().unix()
 
 	// NOTE: only needed once to hydrate lpRangeOrders
-	// TODO: curPrice only used for getSuggestedStrikes()
+	// TODO: curPrice only used for getSurroundingStrikes()
 	lpRangeOrders = await getExistingPositions(market, curPrice)
 
 	if (withdrawExistingPositions && lpRangeOrders.length > 0) {

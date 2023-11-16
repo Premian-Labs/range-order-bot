@@ -1,6 +1,6 @@
 import { IPool, PoolKey, nextYearOfMaturities } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'
-import { marketParams } from '../config/config'
+import { marketParams } from '../config'
 import { lpAddress, addresses } from '../config/constants'
 import { Position } from '../utils/types'
 import { createExpiration, getLast30Days } from '../utils/dates'
@@ -8,6 +8,7 @@ import { premia } from '../config/contracts'
 import { parseTokenId } from '../utils/tokens'
 import { log } from '../utils/logs'
 import { calculatePoolAddress } from '../utils/pools'
+import { getSurroundingStrikes } from '../utils/strikes'
 
 // NOTE: this will find ALL range orders by user (not just from the bot)
 export async function getExistingPositions(market: string, spotPrice: number) {
@@ -75,10 +76,7 @@ async function processOptionType(
 	maturityTimestamp: number,
 	lpRangeOrders: Position[],
 ) {
-	// FIXME: these may return invalid strikes
-	const strikes = premia.options.getSuggestedStrikes(
-		parseEther(spotPrice.toString()),
-	)
+	const strikes = getSurroundingStrikes(parseEther(spotPrice.toString()))
 
 	await Promise.all(
 		strikes.map((strike) =>
@@ -118,12 +116,6 @@ async function processStrike(
 	)
 
 	let poolAddress: string
-
-	/*
-	TODO: Why even attempt to get poolAddress if we can calculate it?
-	NOTE: since the strikes might not be valid from getSuggestedStrikes() this will fail and an erroneous
-	poolAddress will end up being calculated.
-	 */
 	try {
 		poolAddress = await premia.pools.getPoolAddress(poolKey)
 	} catch {
