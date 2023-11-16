@@ -1,3 +1,5 @@
+// noinspection InfiniteLoopJS
+
 import moment from 'moment'
 import { MaxUint256 } from 'ethers'
 import { withdrawSettleLiquidity } from './actions/withdrawPools'
@@ -5,41 +7,50 @@ import {
 	marketParams,
 	spotMoveThreshold,
 	refreshRate,
-	timeThresholdMin,
+	timeThresholdHrs,
 	withdrawExistingPositions,
 	maxCollateralApproved,
-} from './config'
-import { addresses } from './constants'
-import { Position } from './types'
+} from './config/config'
+import { addresses } from './config/constants'
+import { Position } from './utils/types'
 import { getExistingPositions } from './actions/getPositions'
 import { deployLiquidity } from './actions/hydratePools'
-import { getCurrentTimestamp } from './utils/dates'
-import { premia } from './contracts'
+import { premia } from './config/contracts'
 import { log } from './utils/logs'
 import { delay } from './utils/time'
 import { getSpotPrice } from './utils/prices'
 import { setApproval } from './utils/tokens'
 
+let initialized = false
+let lpRangeOrders: Position[] = []
+let spotPriceFailure: false
+
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)
 
-	marketParams[market].spotPrice = await getSpotPrice(market)
-	marketParams[market].ts = getCurrentTimestamp()
+	// NOTE: getSpotPrice() returns undefined if multiple attempts fail
+	const curPrice = await getSpotPrice(market)
 
-	lpRangeOrders = await getExistingPositions(
-		market,
-		marketParams[market].spotPrice!,
-	)
+	if (!curPrice) {
+		log.warning(
+			`Skipping initialization for ${market}, spot price feed is not working`,
+		)
+		return lpRangeOrders
+	}
+
+	// store latest price update
+	marketParams[market].spotPrice = curPrice
+	marketParams[market].ts = moment.utc().unix()
+
+	// NOTE: only needed once to hydrate lpRangeOrders
+	// TODO: curPrice only used for getSuggestedStrikes()
+	lpRangeOrders = await getExistingPositions(market, curPrice)
 
 	if (withdrawExistingPositions && lpRangeOrders.length > 0) {
 		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
 	}
 
-	lpRangeOrders = await deployLiquidity(
-		lpRangeOrders,
-		market,
-		marketParams[market].spotPrice!,
-	)
+	lpRangeOrders = await deployLiquidity(lpRangeOrders, market, curPrice)
 
 	return lpRangeOrders
 }
@@ -47,26 +58,37 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 async function maintainPositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Running position maintenance process for ${market}`)
 
-	const ts = getCurrentTimestamp() // seconds
+	const ts = moment.utc().unix() // seconds
 
-	// attempt to get curent price (retry if error, and skip on failure)
 	const curPrice = await getSpotPrice(market)
 
 	if (!curPrice) {
+		log.warning(
+			`Cannot get ${market} spot price, withdrawing range orders if any exist`,
+		)
+		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
 		return lpRangeOrders
 	}
 
 	log.info(
-		'Updated spot price: ',
+		`Updating spot price for ${market}: `,
 		curPrice,
 		moment.utc().format('YYYY-MM-HH:mm:ss'),
 	)
+
+	/*
+	NOTE: It costs ~ $1 total to do a deposit and withdraw (round turn).  We need to optimize
+	which range orders we are updating to avoid unnecessary costs.
+	 */
+	// TODO: use theta decay instead of fixed frequency
+	// TODO: use delta as a threshold
 
 	// All conditional thresholds that trigger an update
 	const refPrice = marketParams[market].spotPrice!
 	const abovePriceThresh = curPrice > refPrice * (1 + spotMoveThreshold)
 	const belowPriceThresh = curPrice < refPrice * (1 - spotMoveThreshold)
-	const pastTimeThresh = ts - timeThresholdMin * 60 > marketParams[market].ts!
+	const pastTimeThresh =
+		ts - timeThresholdHrs * 60 * 60 > marketParams[market].ts!
 
 	// force update if a threshold is reached
 	if (abovePriceThresh || belowPriceThresh || pastTimeThresh) {
@@ -99,8 +121,8 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 async function updateMarket(lpRangeOrders: Position[], market: string) {
 	if (!marketParams[market].spotPrice) {
 		/*
-			INITALIZATION CASE: if we have no reference price established for a given market then this is the initial run,
-			so we must get price & ts and deploy all orders
+			INITIALIZATION CASE: if we have no reference price established for a given market then this is the
+			 initial run, so we must get price & ts and deploy all orders
 		*/
 		lpRangeOrders = await initializePositions(lpRangeOrders, market)
 	} else {
@@ -116,9 +138,6 @@ async function updateMarket(lpRangeOrders: Position[], market: string) {
 }
 
 async function runRangeOrderBot() {
-	let lpRangeOrders: Position[] = []
-	let initialized = false
-
 	log.app('Starting range order bot...')
 
 	if (!initialized) {
@@ -138,7 +157,7 @@ async function runRangeOrderBot() {
 				log.info(`${market} approval set to MAX`)
 			}
 
-			// Approval for quote token
+			// Approval for quote token (USDC only)
 			const token = premia.contracts.getTokenContract(
 				addresses.tokens.USDC,
 				premia.signer as any,
@@ -148,7 +167,6 @@ async function runRangeOrderBot() {
 
 			log.info(`USDC approval set to MAX`)
 		}
-
 		initialized = true
 	}
 
@@ -166,7 +184,7 @@ async function main() {
 			'Completed, idling... View your active positions at https://app.premia.finance/pools',
 		)
 
-		await delay(refreshRate * 60 * 1000) // refresh rate in min -> milsec
+		await delay(refreshRate * 60 * 1000) // refresh rate from min -> milli sec
 	}
 }
 

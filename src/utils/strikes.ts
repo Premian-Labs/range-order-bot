@@ -1,11 +1,11 @@
-import { MarketParams } from '../types'
+import { MarketParams } from './types'
 import { formatEther, parseEther } from 'ethers'
-import { productionTokenAddr } from '../constants'
-import { maxDelta, minDelta, riskFreeRate } from '../config'
+import { productionTokenAddr } from '../config/constants'
+import { maxDelta, minDelta, riskFreeRate } from '../config/config'
 import { BlackScholes, Option } from '@uqee/black-scholes'
-import { createExpiration, getTTM } from '../utils/dates'
-import { premia, ivOracle } from '../contracts'
-import { log } from '../utils/logs'
+import { getTTM } from './dates'
+import { premia, ivOracle } from '../config/contracts'
+import { log } from './logs'
 
 const blackScholes: BlackScholes = new BlackScholes()
 
@@ -14,12 +14,17 @@ export async function getValidStrikes(
 	spotPrice: number,
 	marketParams: MarketParams,
 	maturityString: string,
+	maturityTimestamp: number,
 	isCall: boolean,
 ) {
 	const strikes = isCall
 		? marketParams[market].callStrikes
 		: marketParams[market].putStrikes
 
+	/*
+	getSuggestedStrike() =>  will look for valid strikes from (.5 * spot) to (2 * spot) using
+	our algorithmic logic for valid strike intervals.
+	 */
 	const suggestedStrikes =
 		strikes ??
 		premia.options
@@ -31,9 +36,9 @@ export async function getValidStrikes(
 		option: Option
 	}[] = []
 
-	const maturityTimestamp = createExpiration(maturityString)
 	const ttm = getTTM(maturityTimestamp)
 
+	// NOTE: we use a multicallProvider for the ivOracle query
 	await Promise.all(
 		suggestedStrikes.map(async (strike) => {
 			const iv = await ivOracle[
@@ -67,6 +72,11 @@ export async function getValidStrikes(
 				log.warning(`Option out of delta range. Delta: ${option.delta}`)
 				return
 			} else if (maxDeltaThreshold || minDeltaThreshold) {
+				/*
+				TODO: need a warning if a market is not being traded for delta range reasons
+				NOTE: there are a large number of non applicable strikes that come back if you use
+				getSuggestedStrikes() which might make logging excessive.
+				 */
 				return
 			}
 

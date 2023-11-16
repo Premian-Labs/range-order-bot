@@ -1,13 +1,16 @@
+// noinspection ExceptionCaughtLocallyJS
+
 import isEqual from 'lodash.isequal'
 import { IPool, OrderType, formatTokenId } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'
-import { lpAddress } from '../constants'
-import { PosKey, Position } from '../types'
-import { premia, provider } from '../contracts'
-import { getCurrentTimestamp } from '../utils/dates'
+import { lpAddress } from '../config/constants'
+import { PosKey, Position } from '../utils/types'
+import { premia } from '../config/contracts'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
+import moment from 'moment/moment'
 
+// NOTE: This will only withdraw positions in lpRangeOrders
 export async function withdrawSettleLiquidity(
 	lpRangeOrders: Position[],
 	market: string,
@@ -24,9 +27,11 @@ export async function withdrawSettleLiquidity(
 		return lpRangeOrders
 	}
 
-	/// @dev: no point parallelizing this since we need to wait for each tx to confirm
-	///		  with a better nonce manager, this would not be necessary since withdrawals
-	///		  are independent of each other
+	/*
+		@dev: no point to process parallel txs since we need to wait for each tx to confirm.
+		With a better nonce manager, this would not be necessary since withdrawals
+		are independent of each other
+	 */
 	for (const filteredRangeOrder of filteredRangeOrders) {
 		log.info(
 			`Processing withdraw for size: ${filteredRangeOrder.depositSize} in ${
@@ -43,10 +48,7 @@ export async function withdrawSettleLiquidity(
 			`Processing withdraw for: ${JSON.stringify(filteredRangeOrder, null, 4)}`,
 		)
 
-		const pool = premia.contracts.getPoolContract(
-			filteredRangeOrder.poolAddress,
-			premia.multicallProvider as any,
-		)
+		//NOTE: Position type (filteredRangeOrder) uses SerializedPosKey type
 		const posKey: PosKey = {
 			owner: filteredRangeOrder.posKey.owner,
 			operator: filteredRangeOrder.posKey.operator,
@@ -54,14 +56,23 @@ export async function withdrawSettleLiquidity(
 			upper: parseEther(filteredRangeOrder.posKey.upper),
 			orderType: filteredRangeOrder.posKey.orderType,
 		}
+
 		const tokenId = formatTokenId({
 			version: 1,
-			operator: lpAddress!,
+			operator: lpAddress,
 			lower: posKey.lower,
 			upper: posKey.upper,
 			orderType: posKey.orderType,
 		})
 
+		const pool = premia.contracts.getPoolContract(
+			filteredRangeOrder.poolAddress,
+			premia.multicallProvider as any,
+		)
+
+		/*
+		PoolSettings array => [ base, quote, oracleAdapter, strike, maturity, isCallPool ]
+		 */
 		const [poolSettings, poolBalance] = await Promise.all([
 			pool.getPoolSettings(),
 			pool.balanceOf(lpAddress, tokenId),
@@ -88,7 +99,6 @@ export async function withdrawSettleLiquidity(
 				premia.signer as any,
 			)
 
-			// If pool expired attempt to settle position and ignore withdraw attempt
 			const exp = Number(poolSettings[4])
 
 			await withdrawPosition(executablePool, posKey, poolBalance, exp)
@@ -99,6 +109,10 @@ export async function withdrawSettleLiquidity(
 			)
 
 			log.info(`Finished withdrawing or settling position.`)
+		} catch (e) {
+			log.warning(
+				`Attempt to withdraw failed: ${JSON.stringify(filteredRangeOrder)}`,
+			)
 		} finally {
 			log.debug(
 				`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`,
@@ -116,7 +130,8 @@ async function withdrawPosition(
 	exp: number,
 	retry: boolean = true,
 ) {
-	if (exp < getCurrentTimestamp()) {
+	// If pool expired attempt to settle position and ignore withdraw attempt
+	if (exp < moment.utc().unix()) {
 		log.info(`Pool expired. Settling position instead...`)
 
 		try {
@@ -124,12 +139,13 @@ async function withdrawPosition(
 			const confirm = await settlePositionTx.wait(1)
 
 			if (confirm?.status == 0) {
-				log.warning(`No settlement of LP Range Order`)
-				log.warning(confirm)
-				return
+				throw new Error(
+					`Failed to confirm settlement of LP Range Order ${confirm}`,
+				)
 			}
 
 			log.info(`LP Range Order settlement confirmed.`)
+			return
 		} catch (err) {
 			await delay(2000)
 
@@ -148,10 +164,10 @@ async function withdrawPosition(
 			poolBalance.toString(),
 			0,
 			parseEther('1'),
-			// { gasLimit: 1400000 },
+			{ gasLimit: 1400000 },
 		)
 
-		const confirm = await provider.waitForTransaction(withdrawTx.hash, 1)
+		const confirm = await withdrawTx.wait(1)
 
 		if (confirm?.status == 0) {
 			throw new Error(

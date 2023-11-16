@@ -1,35 +1,64 @@
+// noinspection JSUnusedGlobalSymbols,DuplicatedCode
+
 /*
 NOTE: Trade related settings may need to be tweaked from time to time depending on risk,
-market conditions, and changes in available strikes/expirations
+market conditions, and changes in available strikes/expirations.
  */
-import { MarketParams } from './types'
-import { addresses, productionTokenAddr } from './constants'
-import { LogLevel } from './utils/logs'
+import { MarketParams } from '../utils/types'
+import { addresses } from './constants'
+import { LogLevel } from '../utils/logs'
 
 /*
-These are the designates markets in which to provide liquidity for. Please note that it is
-possible some markets will not trade if certain settings/thresholds are breached.  All
-settings/thresholds can be found below marketParam configuration.
-
-NOTE: max exposure applies to EITHER long or short exposure limits. It will override one side
-of range orders and by bid-only or ask-only if a position limit is hit. The limit is for EACH
-option (K,T) individually, not collectively.
-
-PREREQUISITE: there MUST be an IV oracle/surface for each market
-
+Log levels can be set to one of the following levels: DEBUG | INFO | WARN | ERROR.  Each level is inclusive
+of the next levels.  For example, if you set to INFO, you will also receive INFO, WARN, & ERROR logs.
  */
+export const logLevel: LogLevel = 'DEBUG'
 
-// Set to one of the following to enable/disable logs: DEBUG | INFO | WARN | ERROR
-export const logLevel: LogLevel = 'INFO'
+/*
+These are the designated markets in which to provide liquidity for. Please note that it is
+possible some markets listed here might not trade if certain thresholds set by the user are breached.
+All these settings/thresholds can be found below marketParam configuration.
+
+markets (required): There MUST be an IV oracle/surface for each market.  Please see the README for available
+markets. Any markets that is not intended to be traded should be completely removed from marketParams.
+
+address (required): Using addresses.tokens.{INSERT TOKEN SYMBOL} will add the token address for the given market. If
+the market is not available, it will not populate.  Please see the README for available markets.
+
+maturities (required): All expirations to trade.  Invalid dates will be rejects and throw warnings while bot is
+running.  Any options that have expired or expire while the bot is running will automatically exercise/settle positions.
+
+strikes (optional): a user can input specific strikes that they would like to trade.  Optionally, if they would like
+to trade all applicable markets (within a delta range), both callSTrikes and putStrikes can be COMPLETELY removed.
+In this case the bot will depend on the min/max delta range as the limiting factors and the bot will trade
+everything inbetween.
+
+depositSize (required): this is based on the number of option contracts your range order could possibly trade if
+traversed fully. This should be smaller than maxExposure.  Note that collateral requirements are different for long
+option positions vs short option positions.
+
+maxExposure (required): max exposure applies to EITHER long or short exposure limits (contracts) when an exposure (long
+or short) is greater than or equal to this value. It will then enter into "close only" mode where it posts only one
+range order using the existing positions in an attempt to close them. Limits apply for EACH option (K,T) individually,
+not collectively.
+
+minOptionPrice (required): This is the minimum price of an option in which we will still quote two-sided markets.
+If price is lower, we will only quote a RIGHT SIDE order. A price lower than 0.004 may cause deposit errors due to
+valid range width collision.
+IMPORTANT: This is NORMALIZED PRICE. Calls are price in underlying and puts
+are priced in USDC but based on the strike price. For example, a 1500 strike
+put at 0.004 is (0.004 * 1500) in USDC terms.
+ */
 
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,
 		maturities: ['17NOV23', '24NOV23'],
-		// callStrikes: [/*1500,*/ 1600, 1700, 1800 /*, 1900*/],
-		// putStrikes: [/*1200, 1300, */ 1400, 1500, 1600],
+		callStrikes: [1500, 1600, 1700, 1800, 1900],
+		putStrikes: [1200, 1300, 1400, 1500, 1600],
 		depositSize: 1,
 		maxExposure: 2,
+		minOptionPrice: 0.003,
 	},
 	WBTC: {
 		address: addresses.tokens.WBTC,
@@ -38,35 +67,7 @@ export const marketParams: MarketParams = {
 		putStrikes: [34000, 35000],
 		depositSize: 0.05,
 		maxExposure: 0.1,
-	},
-	ARB: {
-		address: (addresses.tokens as typeof productionTokenAddr).ARB,
-		maturities: ['17NOV23', '24NOV23'],
-		// callStrikes: [/*0.8,*/ 0.9, 1, 1.1 /*1.2*/],
-		// putStrikes: [/*0.5, 0.6, */ 0.7, 0.8, 0.9],
-		depositSize: 2500,
-		maxExposure: 5000,
-	},
-
-	MAGIC: {
-		address: (addresses.tokens as typeof productionTokenAddr).MAGIC,
-		maturities: ['17NOV23', '24NOV23', '01DEC23', '08DEC23'],
-		depositSize: 100,
-		maxExposure: 1000,
-	},
-
-	GMX: {
-		address: (addresses.tokens as typeof productionTokenAddr).GMX,
-		maturities: ['17NOV23', '24NOV23', '01DEC23', '08DEC23'],
-		depositSize: 10,
-		maxExposure: 100,
-	},
-
-	LINK: {
-		address: (addresses.tokens as typeof productionTokenAddr).LINK,
-		maturities: ['17NOV23', '24NOV23', '01DEC23', '08DEC23'],
-		depositSize: 10,
-		maxExposure: 100,
+		minOptionPrice: 0.003,
 	},
 }
 
@@ -108,18 +109,6 @@ before attempting to find a valid range order.
 export const defaultSpread = 0.1 //10%
 
 /*
-This is the minimum price of an option in which we will still quote
-two-sided markets.  If price is lower, we will only quote a RIGHT SIDE
-order.
-NOTE: A price lower than 0.004 may cause deposit errors due to valid range
-width collision.
-IMPORTANT: This is NORMALIZED PRICE. Calls are price in underlying and puts
-are priced in USDC but based on the strike price. For example, a 1500 strike
-put at 0.004 is (0.004 * 1500) in USDC terms.
- */
-export const minOptionPrice = 0.003
-
-/*
 This is the amount of spot price movement since the last range order update that will force a new
 update of range orders.  It is percentage based and formatted as a decimal (ie 0.01 -> 1%)
  */
@@ -128,18 +117,18 @@ export const spotMoveThreshold = 0.025 // 1%
 /*
 This is the amount of time in minutes that the spot price & ts for a given market is checked to see
 if price or ts has exceeded thresholds to force updates to lp range orders
-NOTE: this should be smaller than timeThresholdMin (which should be divisible by refreshRate)
+NOTE: this should be smaller than timeThresholdHrs (which should be divisible by refreshRate)
 optimal range is likely between 5 min <-> 60 min
  */
 export const refreshRate = 5 //minutes
 
 /*
-The max number of minutes LP range orders will sit out in the market without being updated. This will
+The max number of hours LP range orders will sit out in the market without being updated. This will
 happen when spot fails to exceed the spotMoveThreshold, but we still need to update orders to compensate
 for time decay.
-NOTE: optimal range is likely 360 <-> 1440 min (6 <-> 24 hrs)
+NOTE: optimal range is likely 1 <-> 24 hrs
  */
-export const timeThresholdMin = 720 // expressed in minutes
+export const timeThresholdHrs = 6 // float expressed in hours
 
 /*
 If set to true, when the bot initialized it will search for existing LP range orders

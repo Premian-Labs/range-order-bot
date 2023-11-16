@@ -23,6 +23,7 @@ export interface MarketParam {
 	putStrikes?: number[] // if not passed, will be inferred from delta range
 	depositSize: number
 	maxExposure: number
+	minOptionPrice: number
 	spotPrice?: number
 	ts?: number
 }

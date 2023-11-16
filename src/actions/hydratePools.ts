@@ -1,6 +1,8 @@
-import { PosKey, Position, MarketParams } from '../types'
+// noinspection ExceptionCaughtLocallyJS
+
+import { PosKey, Position, MarketParams } from '../utils/types'
 import { formatEther, parseEther, formatUnits, parseUnits } from 'ethers'
-import { lpAddress, addresses } from '../constants'
+import { lpAddress, addresses } from '../config/constants'
 import {
 	autoDeploy,
 	defaultSpread,
@@ -8,19 +10,18 @@ import {
 	maxDeploymentFee,
 	minAnnihilationSize,
 	minDTE,
-	minOptionPrice,
 	rangeWidthMultiplier,
-} from '../config'
+} from '../config/config'
 import { IPool, OrderType, PoolKey, TokenType } from '@premia/v3-sdk'
 import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
 import { setApproval } from '../utils/tokens'
-import { premia, signerAddress, poolFactory } from '../contracts'
+import { premia, signerAddress, poolFactory } from '../config/contracts'
 import { getValidStrikes } from '../utils/strikes'
 import {
 	getCollateralApprovalAmount,
 	getValidRangeWidth,
 } from '../utils/rangeOrders'
-import { marketParams } from '../config'
+import { marketParams } from '../config/config'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
 
@@ -32,12 +33,11 @@ export async function deployLiquidity(
 	log.app(`Deploying liquidity for ${market}`)
 
 	try {
-		/// @dev: no point parallelizing this since we need to wait for each tx to confirm
-		///		  with a better nonce manager, this would not be necessary since withdrawals
-		///		  are independent of each other
 		for (const maturityString of marketParams[market].maturities) {
 			log.info(`Spot Price for ${market}: ${spotPrice}`)
+			log.info(`Processing strikes for ${market}-${maturityString} expiration`)
 
+			// calls
 			lpRangeOrders = await processStrikes(
 				market,
 				spotPrice,
@@ -47,6 +47,7 @@ export async function deployLiquidity(
 				lpRangeOrders,
 			)
 
+			// puts
 			lpRangeOrders = await processStrikes(
 				market,
 				spotPrice,
@@ -82,16 +83,16 @@ export async function processStrikes(
 
 	log.debug(`Maturity TS: ${maturityTimestamp} (${daysToExpiration} DTE)`)
 
-	// 1.1 check if option already expired
+	// check if option already expired
 	if (daysToExpiration <= 0) {
 		log.warning(`Skipping expiration date: ${maturityString} is in the past`)
 		return lpRangeOrders
 	}
 
-	// 1.2 check if option expiration is more than 1 year out
+	// check if option expiration is more than 1 year out
 	if (daysToExpiration > 365) {
 		log.warning(
-			`Skipping expiration date: ${maturityString} is more then in 1 year`,
+			`Skipping expiration date: ${maturityString} is more than in 1 year`,
 		)
 		return lpRangeOrders
 	}
@@ -101,12 +102,10 @@ export async function processStrikes(
 		spotPrice,
 		marketParams,
 		maturityString,
+		maturityTimestamp,
 		isCall,
 	)
 
-	/// @dev: no point parallelizing this since we need to wait for each tx to confirm
-	///		  with a better nonce manager, this would not be necessary since withdrawals
-	///		  are independent of each other
 	for (const { strike, option } of strikes) {
 		log.info(`Depositing for ${maturityString}-${strike}-${isCall ? 'C' : 'P'}`)
 
@@ -119,22 +118,24 @@ export async function processStrikes(
 			isCall,
 		)
 
+		// NOTE: if null, we are skipping the strike due to param checks in fetchOrDeployPool()
 		if (!fetchedPoolInfo) continue
 
-		const { pool, executablePool, poolAddress } = fetchedPoolInfo
+		const { multicallPool, executablePool, poolAddress } = fetchedPoolInfo
 
 		let [marketPrice, longBalance, shortBalance] = await Promise.all([
-			parseFloat(formatEther(await pool.marketPrice())),
+			parseFloat(formatEther(await multicallPool.marketPrice())),
 
-			parseFloat(formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG))),
 			parseFloat(
-				formatEther(await pool.balanceOf(lpAddress!, TokenType.SHORT)),
+				formatEther(await multicallPool.balanceOf(lpAddress!, TokenType.LONG)),
+			),
+			parseFloat(
+				formatEther(await multicallPool.balanceOf(lpAddress!, TokenType.SHORT)),
 			),
 		])
 
 		// check to see if we have positions that can be annihilated
 		await processAnnihilate(
-			pool,
 			executablePool,
 			market,
 			maturityString,
@@ -168,9 +169,11 @@ export async function processStrikes(
 		/*
 			NOTE: for LEFT SIDE orders if market price < option price than we use market price due
 			to issues with crossing markets with range orders (which cause the range order to fail)
+			leftPosKey is null when the minOptionPrice config threshold is breached
  		*/
 
 		const { leftPosKey, leftSideCollateralAmount } = await prepareLeftSideOrder(
+			marketParams,
 			market,
 			maturityString,
 			strike,
@@ -181,13 +184,12 @@ export async function processStrikes(
 		)
 
 		/*
-			NOTE: once the deposits are queued up, we need to do quality control checks to make sure that
-			we are not breaching any limits (ie. max exposure or low account collateral balance)
+		NOTE: once the deposits are queued up, we need to do quality control checks to make sure that
+		we are not breaching any limits (ie max exposure or low account collateral balance)
 		*/
 
-		await processDeposits(
+		lpRangeOrders = await processDeposits(
 			lpRangeOrders,
-			pool,
 			executablePool,
 			poolAddress,
 			market,
@@ -277,7 +279,7 @@ async function fetchOrDeployPool(
 		}
 	}
 
-	const pool = premia.contracts.getPoolContract(
+	const multicallPool = premia.contracts.getPoolContract(
 		poolAddress,
 		premia.multicallProvider as any,
 	)
@@ -288,11 +290,10 @@ async function fetchOrDeployPool(
 		premia.signer as any,
 	)
 
-	return { pool, executablePool, poolAddress }
+	return { multicallPool, executablePool, poolAddress }
 }
 
 async function processAnnihilate(
-	pool: IPool,
 	executablePool: IPool,
 	market: string,
 	maturityString: string,
@@ -310,14 +311,6 @@ async function processAnnihilate(
 
 		try {
 			await annihilatePositions(executablePool, annihilationSizeBigInt)
-			;[longBalance, shortBalance] = await Promise.all([
-				parseFloat(
-					formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG)),
-				),
-				parseFloat(
-					formatEther(await pool.balanceOf(lpAddress!, TokenType.LONG)),
-				),
-			])
 		} catch {
 			log.warning(
 				`Annihilation failed for ${market} ${maturityString}-${strike}-${
@@ -330,7 +323,6 @@ async function processAnnihilate(
 
 async function processDeposits(
 	lpRangeOrders: Position[],
-	pool: IPool,
 	executablePool: IPool,
 	poolAddress: string,
 	market: string,
@@ -353,10 +345,12 @@ async function processDeposits(
 		collateralTokenAddr,
 		premia.multicallProvider as any,
 	)
+
 	const [decimals, collateralValue] = await Promise.all([
 		Number(await token.decimals()),
-		token.balanceOf(lpAddress!),
+		token.balanceOf(lpAddress),
 	])
+
 	const collateralBalance = parseFloat(formatUnits(collateralValue, decimals))
 
 	log.info(
@@ -368,11 +362,13 @@ async function processDeposits(
 	// determine deposit capabilities
 	const sufficientCollateral =
 		collateralBalance >= rightSideCollateralAmount + leftSideCollateralAmount
+	// NOTE: if we are using options, then the return value for collateralAmount returns ZERO
 	const rightSideUsesOptions = rightSideCollateralAmount == 0
 	const leftSideUsesOptions = leftSideCollateralAmount == 0
 
-	// NOTE: we will still post single sided markets with options (close only quoting)
-	// If both orders require collateral and there is not enough for either: skip BOTH deposits
+	// NOTE: we will still post single sided markets with options (close only quoting) so even if we have no
+	// collateral but at least one side can use options, we will still post that order.
+	// If BOTH orders require collateral and there is not enough for either: skip BOTH deposits
 	if (
 		!sufficientCollateral &&
 		leftSideCollateralAmount > 0 &&
@@ -385,7 +381,7 @@ async function processDeposits(
 		${strike} 
 		${isCall ? 'Call' : 'Put'}`,
 		)
-		return
+		return lpRangeOrders
 	}
 
 	// check to see if we have breached our position limit for RIGHT SIDE orders
@@ -396,7 +392,6 @@ async function processDeposits(
 		// RIGHT SIDE ORDER
 		lpRangeOrders = await depositRangeOrderLiq(
 			market,
-			pool,
 			executablePool,
 			poolAddress,
 			strike,
@@ -419,7 +414,6 @@ async function processDeposits(
 		// LEFT SIDE ORDER
 		lpRangeOrders = await depositRangeOrderLiq(
 			market,
-			pool,
 			executablePool,
 			poolAddress,
 			strike,
@@ -433,6 +427,7 @@ async function processDeposits(
 			lpRangeOrders,
 		)
 	}
+	return lpRangeOrders
 }
 
 async function prepareRightSideOrder(
@@ -495,6 +490,7 @@ async function prepareRightSideOrder(
 }
 
 async function prepareLeftSideOrder(
+	marketParams: MarketParams,
 	market: string,
 	maturityString: string,
 	strike: number,
@@ -510,7 +506,7 @@ async function prepareLeftSideOrder(
 	let leftPosKey: PosKey | undefined
 
 	// If price is too low, we want to skip this section (we will not post LEFT side order)
-	if (leftRefPrice > minOptionPrice) {
+	if (leftRefPrice > marketParams[market].minOptionPrice) {
 		const marketPriceLower =
 			Math.floor((leftRefPrice * (1 - defaultSpread) - 0.001) * 1000) / 1000
 		const targetLowerTick =
@@ -638,7 +634,6 @@ async function annihilatePositions(
 
 async function depositRangeOrderLiq(
 	market: string,
-	pool: IPool,
 	executablePool: IPool,
 	poolAddress: string,
 	strike: number,
@@ -655,6 +650,7 @@ async function depositRangeOrderLiq(
 		posKey.orderType !== OrderType.LONG_COLLATERAL &&
 		posKey.orderType !== OrderType.COLLATERAL_SHORT
 	) {
+		// NOTE: we do not catch this error upstream.
 		throw new Error(`CSUP order types not yet supported: ${posKey.orderType}`)
 	}
 
@@ -665,7 +661,7 @@ async function depositRangeOrderLiq(
 			premia.signer as any,
 		)
 
-		const nearestBelow = await pool.getNearestTicksBelow(
+		const nearestBelow = await executablePool.getNearestTicksBelow(
 			posKey.lower,
 			posKey.upper,
 		)
@@ -674,7 +670,7 @@ async function depositRangeOrderLiq(
 		NOTE: below covers the cases in which we are doing a deposit, but it is with
 		collateral and not options. If it is with options, then we do not need any
 		approvals for options to be deposited.
-	*/
+		*/
 
 		const approvalRequired =
 			(posKey.orderType == OrderType.LONG_COLLATERAL && isLeftSide) ||
@@ -762,9 +758,9 @@ async function depositPosition(
 			depositSize,
 			0n,
 			parseEther('1'),
-			// {
-			// 	gasLimit: 10000000, // Fails to properly estimate gas limit
-			// },
+			{
+				gasLimit: 10000000, // Fails to properly estimate gas limit
+			},
 		)
 
 		const confirm = await depositTx.wait(1)

@@ -1,7 +1,7 @@
 import { OrderType } from '@premia/v3-sdk'
 import { formatEther } from 'ethers'
-import { VALID_ORDER_WIDTHS } from '../constants'
-import { PosKey } from '../types'
+import { VALID_ORDER_WIDTHS } from '../config/constants'
+import { PosKey } from './types'
 import { log } from './logs'
 
 export async function getCollateralApprovalAmount(
@@ -42,7 +42,7 @@ export async function getCollateralApprovalAmount(
 		/*
 			NOTE: all other cases, we are  use options instead of collateral so the collateral
 			amount to approve is zero
-			ie. order type CS & isLeftSide -> short options being posted on LEFT side
+			ie order type CS & isLeftSide -> short options being posted on LEFT side
 		*/
 		return 0
 	}

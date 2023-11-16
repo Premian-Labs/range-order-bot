@@ -1,14 +1,15 @@
 import { IPool, PoolKey, nextYearOfMaturities } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'
-import { marketParams } from '../config'
-import { lpAddress, addresses } from '../constants'
-import { Position } from '../types'
+import { marketParams } from '../config/config'
+import { lpAddress, addresses } from '../config/constants'
+import { Position } from '../utils/types'
 import { createExpiration, getLast30Days } from '../utils/dates'
-import { premia } from '../contracts'
+import { premia } from '../config/contracts'
 import { parseTokenId } from '../utils/tokens'
 import { log } from '../utils/logs'
 import { calculatePoolAddress } from '../utils/pools'
 
+// NOTE: this will find ALL range orders by user (not just from the bot)
 export async function getExistingPositions(market: string, spotPrice: number) {
 	let lpRangeOrders: Position[] = []
 
@@ -16,6 +17,7 @@ export async function getExistingPositions(market: string, spotPrice: number) {
 
 	try {
 		const maturities = [...getLast30Days(), ...nextYearOfMaturities()].map(
+			// NOTE: maturity now follows "03NOV23" string format
 			(maturity) => maturity.format('DDMMMYY'),
 		)
 
@@ -32,6 +34,7 @@ export async function getExistingPositions(market: string, spotPrice: number) {
 		log.debug(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
 	}
 
+	// NOTE: lpRangeOrders array is populated in the last function call => processTokenIds ()
 	return lpRangeOrders
 }
 
@@ -72,6 +75,7 @@ async function processOptionType(
 	maturityTimestamp: number,
 	lpRangeOrders: Position[],
 ) {
+	// FIXME: these may return invalid strikes
 	const strikes = premia.options.getSuggestedStrikes(
 		parseEther(spotPrice.toString()),
 	)
@@ -108,11 +112,18 @@ async function processStrike(
 	}
 
 	log.debug(
-		`Checking: ${maturityString}-${formatEther(strike)}-${isCall ? 'C' : 'P'}`,
+		`Checking Balance for: ${maturityString}-${formatEther(strike)}-${
+			isCall ? 'C' : 'P'
+		}`,
 	)
 
 	let poolAddress: string
 
+	/*
+	TODO: Why even attempt to get poolAddress if we can calculate it?
+	NOTE: since the strikes might not be valid from getSuggestedStrikes() this will fail and an erroneous
+	poolAddress will end up being calculated.
+	 */
 	try {
 		poolAddress = await premia.pools.getPoolAddress(poolKey)
 	} catch {
@@ -131,6 +142,11 @@ async function processStrike(
 			(tokenId) => tokenId > 2n,
 		)
 	} catch {
+		log.warning(
+			`No balance query for ${market}-${maturityString}-${formatEther(
+				strike,
+			)}-${isCall ? 'C' : 'P'}`,
+		)
 		return
 	}
 
