@@ -10,7 +10,7 @@ import { WAD_DECIMALS, ZERO_BI, parseNumber } from '@premia/v3-sdk'
 
 const blackScholes: BlackScholes = new BlackScholes()
 
-export async function getValidStrikes(
+export async function getStrikesAndOptions(
 	market: string,
 	spotPrice: number,
 	marketParams: MarketParams,

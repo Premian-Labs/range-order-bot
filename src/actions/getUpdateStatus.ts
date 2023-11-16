@@ -1,6 +1,7 @@
 import { OptionParams } from '../utils/types'
 
 //TODO: since this is run prior to any deposit, pull iv Oracle logic into here as well.
+//TODO: should we handle chronic IV failure in here (aka signal to withdraw all range orders)
 export async function getUpdateOptionParams(
 	optionParams: OptionParams[],
 	market: string,

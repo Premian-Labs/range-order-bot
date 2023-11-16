@@ -16,7 +16,7 @@ import { IPool, OrderType, PoolKey, TokenType } from '@premia/v3-sdk'
 import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
 import { setApproval } from '../utils/tokens'
 import { premia, signerAddress, poolFactory } from '../config/contracts'
-import { getValidStrikes } from '../utils/strikes'
+import { getStrikesAndOptions } from '../utils/strikes'
 import {
 	getCollateralApprovalAmount,
 	getValidRangeWidth,
@@ -97,7 +97,7 @@ export async function processStrikes(
 		return lpRangeOrders
 	}
 
-	const strikes = await getValidStrikes(
+	const strikes = await getStrikesAndOptions(
 		market,
 		spotPrice,
 		marketParams,
