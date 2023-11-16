@@ -1,3 +1,5 @@
+// noinspection JSUnusedGlobalSymbols
+
 import { logLevel } from '../config'
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
