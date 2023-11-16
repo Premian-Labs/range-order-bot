@@ -1,5 +1,6 @@
 import { OptionParams } from '../utils/types'
 
+//TODO: since this is run prior to any deposit, pull iv Oracle logic into here as well.
 export async function getUpdateOptionParams(
 	optionParams: OptionParams[],
 	market: string,

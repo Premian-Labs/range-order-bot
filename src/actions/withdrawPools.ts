@@ -109,7 +109,7 @@ export async function withdrawSettleLiquidity(
 			)
 
 			log.info(`Finished withdrawing or settling position.`)
-		} catch (e) {
+		} catch (err) {
 			log.warning(
 				`Attempt to withdraw failed: ${JSON.stringify(filteredRangeOrder)}`,
 			)

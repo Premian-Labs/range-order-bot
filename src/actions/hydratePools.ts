@@ -57,8 +57,8 @@ export async function deployLiquidity(
 				lpRangeOrders,
 			)
 		}
-	} catch (e) {
-		log.error(`Error deploying liquidity: ${e}`)
+	} catch (err) {
+		log.error(`Error deploying liquidity: ${err}`)
 		log.error(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
 		return lpRangeOrders
 	}
@@ -732,8 +732,8 @@ async function depositRangeOrderLiq(
 		})
 
 		return lpRangeOrders
-	} catch (e) {
-		log.error(`Error depositing range order: ${e}`)
+	} catch (err) {
+		log.error(`Error depositing range order: ${err}`)
 		return lpRangeOrders
 	}
 }

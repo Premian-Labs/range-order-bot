@@ -15,7 +15,7 @@ export async function getSpotPrice(market: string, retry: boolean = true) {
 				),
 			),
 		)
-	} catch (e) {
+	} catch (err) {
 		await delay(2000)
 
 		if (retry) {
