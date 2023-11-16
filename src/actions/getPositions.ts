@@ -1,6 +1,6 @@
 import { IPool, PoolKey, nextYearOfMaturities } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'
-import { marketParams } from '../config'
+import { marketParams } from '../config/config'
 import { lpAddress, addresses } from '../config/constants'
 import { Position } from '../utils/types'
 import { createExpiration, getLast30Days } from '../utils/dates'

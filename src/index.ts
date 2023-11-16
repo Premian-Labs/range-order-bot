@@ -10,7 +10,7 @@ import {
 	timeThresholdHrs,
 	withdrawExistingPositions,
 	maxCollateralApproved,
-} from './config'
+} from './config/config'
 import { addresses } from './config/constants'
 import { Position } from './utils/types'
 import { getExistingPositions } from './actions/getPositions'
@@ -23,7 +23,6 @@ import { setApproval } from './utils/tokens'
 
 let initialized = false
 let lpRangeOrders: Position[] = []
-let spotPriceFailure: false // TODO: is this going to be used?
 
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)

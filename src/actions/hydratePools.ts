@@ -11,7 +11,7 @@ import {
 	minAnnihilationSize,
 	minDTE,
 	rangeWidthMultiplier,
-} from '../config'
+} from '../config/config'
 import { IPool, OrderType, PoolKey, TokenType } from '@premia/v3-sdk'
 import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
 import { setApproval } from '../utils/tokens'
@@ -21,7 +21,7 @@ import {
 	getCollateralApprovalAmount,
 	getValidRangeWidth,
 } from '../utils/rangeOrders'
-import { marketParams } from '../config'
+import { marketParams } from '../config/config'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
 
