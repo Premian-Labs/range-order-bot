@@ -18,19 +18,10 @@ export async function getValidStrikes(
 	maturityTimestamp: number,
 	isCall: boolean,
 ) {
+	//NOTE: we know there are values as we populate them in hydrateStrikes()
 	const strikes = isCall
-		? marketParams[market].callStrikes
-		: marketParams[market].putStrikes
-
-	/*
-	getSuggestedStrike() =>  will look for valid strikes from (.5 * spot) to (2 * spot) using
-	our algorithmic logic for valid strike intervals.
-	 */
-	const suggestedStrikes =
-		strikes ??
-		getSurroundingStrikes(parseEther(spotPrice.toString())).map((strike) =>
-			Number(formatEther(strike)),
-		)
+		? marketParams[market].callStrikes!
+		: marketParams[market].putStrikes!
 
 	const validStrikes: {
 		strike: number
@@ -41,7 +32,7 @@ export async function getValidStrikes(
 
 	// NOTE: we use a multicallProvider for the ivOracle query
 	await Promise.all(
-		suggestedStrikes.map(async (strike) => {
+		strikes.map(async (strike) => {
 			const iv = await ivOracle[
 				'getVolatility(address,uint256,uint256,uint256)'
 			](
@@ -65,19 +56,12 @@ export async function getValidStrikes(
 			const maxDeltaThreshold = Math.abs(option.delta) > maxDelta
 			const minDeltaThreshold = Math.abs(option.delta) < minDelta
 
-			if (strikes && (maxDeltaThreshold || minDeltaThreshold)) {
+			if (maxDeltaThreshold || minDeltaThreshold) {
 				log.warning(
 					`Skipping ${market} ${maturityString} ${isCall ? 'Calls' : 'Puts'}`,
 				)
 
 				log.warning(`Option out of delta range. Delta: ${option.delta}`)
-				return
-			} else if (maxDeltaThreshold || minDeltaThreshold) {
-				/*
-				TODO: need a warning if a market is not being traded for delta range reasons
-				NOTE: there are a large number of non applicable strikes that come back if you use
-				getSurroundingStrikes() which might make logging excessive.
-				 */
 				return
 			}
 

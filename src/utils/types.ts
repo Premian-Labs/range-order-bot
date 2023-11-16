@@ -39,3 +39,17 @@ export interface Position {
 	depositSize: number
 	posKey: SerializedPosKey
 }
+
+export interface OptionParams {
+	market: string
+	maturity: string
+	type: string
+	strike: number
+	spot: number
+	ts: number
+	iv: number
+	delta: number
+	theta: number
+	vega: number
+	update: boolean
+}

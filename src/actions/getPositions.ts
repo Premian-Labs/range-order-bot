@@ -8,10 +8,9 @@ import { premia } from '../config/contracts'
 import { parseTokenId } from '../utils/tokens'
 import { log } from '../utils/logs'
 import { calculatePoolAddress } from '../utils/pools'
-import { getSurroundingStrikes } from '../utils/strikes'
 
 // NOTE: this will find ALL range orders by user (not just from the bot)
-export async function getExistingPositions(market: string, spotPrice: number) {
+export async function getExistingPositions(market: string) {
 	let lpRangeOrders: Position[] = []
 
 	log.info(`Getting existing positions for: ${market}`)
@@ -24,7 +23,7 @@ export async function getExistingPositions(market: string, spotPrice: number) {
 
 		await Promise.all(
 			maturities.map((maturityString) =>
-				processMaturity(maturityString, market, spotPrice, lpRangeOrders),
+				processMaturity(maturityString, market, lpRangeOrders),
 			),
 		)
 
@@ -42,7 +41,6 @@ export async function getExistingPositions(market: string, spotPrice: number) {
 async function processMaturity(
 	maturityString: string,
 	market: string,
-	spotPrice: number,
 	lpRangeOrders: Position[],
 ) {
 	let maturityTimestamp: number
@@ -60,7 +58,6 @@ async function processMaturity(
 				isCall,
 				maturityString,
 				market,
-				spotPrice,
 				maturityTimestamp,
 				lpRangeOrders,
 			),
@@ -72,14 +69,17 @@ async function processOptionType(
 	isCall: boolean,
 	maturityString: string,
 	market: string,
-	spotPrice: number,
 	maturityTimestamp: number,
 	lpRangeOrders: Position[],
 ) {
-	const strikes = getSurroundingStrikes(parseEther(spotPrice.toString()))
+	//NOTE: we know there are value as we hydrate it in hydrateStrikes()
+	const strikes = isCall
+		? marketParams[market].callStrikes!
+		: marketParams[market].putStrikes!
+	const strikesBigInt = strikes.map((strike) => parseEther(strike.toString()))
 
 	await Promise.all(
-		strikes.map((strike) =>
+		strikesBigInt.map((strike) =>
 			processStrike(
 				strike,
 				isCall,
@@ -115,7 +115,10 @@ async function processStrike(
 		}`,
 	)
 
-	// TODO: review how getSurroundingStrikes() effects this
+	/*
+	NOTE: this is here for contract upgrades that could cause issues with getting
+	old pools that already existed.
+	 */
 	let poolAddress: string
 	try {
 		poolAddress = await premia.pools.getPoolAddress(poolKey)

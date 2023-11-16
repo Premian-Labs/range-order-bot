@@ -12,7 +12,7 @@ import {
 	maxCollateralApproved,
 } from './config'
 import { addresses } from './config/constants'
-import { Position } from './utils/types'
+import { OptionParams, Position } from './utils/types'
 import { getExistingPositions } from './actions/getPositions'
 import { deployLiquidity } from './actions/hydratePools'
 import { premia } from './config/contracts'
@@ -20,16 +20,20 @@ import { log } from './utils/logs'
 import { delay } from './utils/time'
 import { getSpotPrice } from './utils/prices'
 import { setApproval } from './utils/tokens'
+import { getUpdateOptionParams } from './actions/getUpdateStatus'
+import { hydrateStrikes } from './actions/hydrateStrikes'
 
 let initialized = false
 let lpRangeOrders: Position[] = []
+let optionParams: OptionParams[] = []
 
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)
 
-	// NOTE: getSpotPrice() returns undefined if multiple attempts fail
+	// NOTE: getSpotPrice() returns undefined if multiple oracle attempts fail
 	// TODO: potentially use coingecko API price if chainlink oracle fails
 	const curPrice = await getSpotPrice(market)
+	const ts = moment.utc().unix()
 
 	if (!curPrice) {
 		log.warning(
@@ -39,15 +43,23 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	}
 
 	marketParams[market].spotPrice = curPrice
-	marketParams[market].ts = moment.utc().unix()
+	marketParams[market].ts = ts
+
+	//NOTE: strikes are an OPTIONAL user input. If not provided, it needs hydration
+	await hydrateStrikes(market)
 
 	// NOTE: only needed once to hydrate lpRangeOrders
-	lpRangeOrders = await getExistingPositions(market, curPrice)
+	lpRangeOrders = await getExistingPositions(market)
 
 	if (withdrawExistingPositions && lpRangeOrders.length > 0) {
 		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
 	}
 
+	// Initial hydration of option specs for each pool (K,T)
+	optionParams = await getUpdateOptionParams(optionParams, market, curPrice, ts)
+
+	// TODO: need to inject optionParams (since it is needed in maintenance case)
+	// NOTE: all markets in optionsParams are deployed
 	lpRangeOrders = await deployLiquidity(lpRangeOrders, market, curPrice)
 
 	return lpRangeOrders
@@ -73,13 +85,6 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 		moment.utc().format('YYYY-MM-HH:mm:ss'),
 	)
 
-	/*
-	NOTE: It costs ~ $1 total to do a deposit and withdraw (round turn).  We need to optimize
-	which range orders we are updating to avoid unnecessary costs.
-	 */
-	// TODO: use theta decay instead of fixed frequency
-	// TODO: use delta as a threshold
-
 	// All conditional thresholds that trigger an update
 	const refPrice = marketParams[market].spotPrice!
 	const abovePriceThresh = curPrice > refPrice * (1 + spotMoveThreshold)
@@ -89,20 +94,28 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 
 	// force update if a threshold is reached
 	if (abovePriceThresh || belowPriceThresh || pastTimeThresh) {
-		log.info('Threshold trigger reached. Updating orders...')
+		log.info('Threshold trigger reached. Checking for updates...')
 
 		if (abovePriceThresh) log.info(`Above Price Threshold`)
 		if (belowPriceThresh) log.info(`Below Price Threshold`)
 		if (pastTimeThresh) log.info(`Time Threshold`)
 
-		// update ref price & ts to latest value
+		optionParams = await getUpdateOptionParams(
+			optionParams,
+			market,
+			curPrice,
+			ts,
+		)
+
 		marketParams[market].spotPrice = curPrice
 		marketParams[market].ts = ts
 
 		// remove any liquidity if present
+		// TODO: inject optionParams to determine what to withdraw
 		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
 
 		// deploy liquidity in given market using marketParam settings
+		// TODO: inject optionParams to determine what to deposit
 		lpRangeOrders = await deployLiquidity(
 			lpRangeOrders,
 			market,
