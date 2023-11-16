@@ -42,7 +42,6 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	marketParams[market].ts = moment.utc().unix()
 
 	// NOTE: only needed once to hydrate lpRangeOrders
-	// TODO: curPrice only used for getSurroundingStrikes()
 	lpRangeOrders = await getExistingPositions(market, curPrice)
 
 	if (withdrawExistingPositions && lpRangeOrders.length > 0) {
@@ -58,7 +57,6 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Running position maintenance process for ${market}`)
 
 	const ts = moment.utc().unix() // seconds
-
 	const curPrice = await getSpotPrice(market)
 
 	if (!curPrice) {

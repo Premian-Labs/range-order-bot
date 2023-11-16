@@ -115,6 +115,7 @@ async function processStrike(
 		}`,
 	)
 
+	// TODO: review how getSurroundingStrikes() effects this
 	let poolAddress: string
 	try {
 		poolAddress = await premia.pools.getPoolAddress(poolKey)

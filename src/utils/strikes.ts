@@ -76,7 +76,7 @@ export async function getValidStrikes(
 				/*
 				TODO: need a warning if a market is not being traded for delta range reasons
 				NOTE: there are a large number of non applicable strikes that come back if you use
-				getSuggestedStrikes() which might make logging excessive.
+				getSurroundingStrikes() which might make logging excessive.
 				 */
 				return
 			}
@@ -95,6 +95,7 @@ export async function getValidStrikes(
 	return validStrikes
 }
 
+// TODO: review code logic
 export function getSurroundingStrikes(
 	spotPrice: BigNumberish,
 	decimals: number | bigint = WAD_DECIMALS,
