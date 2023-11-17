@@ -34,11 +34,29 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	const curPrice = await getSpotPrice(market)
 	const ts = moment.utc().unix()
 
-	// NOTE: for spot failure case on initialization, we just end process
+	// NOTE: for spot failure case on initialization, we terminate process
 	if (curPrice === undefined) {
 		log.warning(
 			`Skipping initialization for ${market}, spot price feed is not working`,
 		)
+
+		// IMPORTANT: if user gave strikes, we can getExistingPositions to withdraw
+		if (withdrawExistingPositions && marketParams[market].callStrikes && marketParams[market].putStrikes){
+			log.warning(
+				'Attempting to withdraw existing positions...'
+			)
+
+			// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
+			lpRangeOrders = await getExistingPositions(market)
+
+			// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
+			optionParams = await getUpdateOptionParams(optionParams, market, curPrice, ts)
+
+			if (withdrawExistingPositions && lpRangeOrders.length > 0) {
+				lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market, optionParams)
+			}
+		}
+
 		return lpRangeOrders
 	}
 
@@ -48,7 +66,8 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	// NOTE: only needed ONCE to hydrate strikes per market (if not provided)
 	await hydrateStrikes(market, curPrice)
 
-	// NOTE: only needed ONCE to hydrate lpRangeOrders per market
+	// NOTE: only needed in initialization case for withdrawals
+	// IMPORTANT: can ONLY be run if strikes exist	in marketParams
 	lpRangeOrders = await getExistingPositions(market)
 
 	// Initial hydration of option specs for each pool (K,T)
@@ -61,6 +80,9 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 
 	// NOTE: all markets in optionsParams are deployed
 	lpRangeOrders = await deployLiquidity(lpRangeOrders, market, curPrice, optionParams)
+
+	// initialization path complete
+	initialized = true
 
 	return lpRangeOrders
 }
@@ -130,7 +152,7 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 }
 
 async function updateMarket(lpRangeOrders: Position[], market: string) {
-	if (!marketParams[market].spotPrice) {
+	if (!initialized) {
 		/*
 			INITIALIZATION CASE: if we have no reference price established for a given market then this is the
 			 initial run, so we must get price & ts and deploy all orders
@@ -178,7 +200,6 @@ async function runRangeOrderBot() {
 
 			log.info(`USDC approval set to MAX`)
 		}
-		initialized = true
 	}
 
 	// iterate through each market to determine is liquidity needs to be deployed/updated
