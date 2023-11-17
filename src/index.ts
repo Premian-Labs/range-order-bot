@@ -30,6 +30,14 @@ let optionParams: OptionParams[] = []
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)
 
+	const bothStrikesProvided = marketParams[market].callStrikes !== undefined && marketParams[market].putStrikes !== undefined
+	const neitherStrikesProvided = marketParams[market].callStrikes === undefined && marketParams[market].putStrikes === undefined
+
+	if (!neitherStrikesProvided || !bothStrikesProvided ){
+		log.error(`Can only run ${market} with BOTH call/put strike arrays or NEITHER `)
+		throw Error
+	}
+
 	// NOTE: may return undefined
 	const curPrice = await getSpotPrice(market)
 	const ts = moment.utc().unix()
@@ -92,7 +100,8 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	)
 
 	// Optional user config to start fresh
-	if (withdrawExistingPositions && lpRangeOrders.length > 0) {
+	// NOTE: if withdrawExistingPosition => withdrawable is false (will not process withdraw)
+	if (lpRangeOrders.length > 0) {
 		lpRangeOrders = await withdrawSettleLiquidity(
 			lpRangeOrders,
 			market,
@@ -101,7 +110,6 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	}
 
 	// NOTE: all markets in optionsParams are deployed
-	// TODO: if withdrawExistingPosition is false, will we dupe range orders?
 	lpRangeOrders = await deployLiquidity(
 		lpRangeOrders,
 		market,
@@ -116,12 +124,6 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 }
 
 async function maintainPositions(lpRangeOrders: Position[], market: string) {
-	/*
-	TODO: if withdrawExistingPositions is set to false, what happens in the maintenance cycle?
-	The way this is set up, the user will end up cycling through ALL (new and existing) positions
-	and will cause those positions to be withdrawn.
-	*/
-
 	log.app(`Running position maintenance process for ${market}`)
 
 	const ts = moment.utc().unix() // seconds

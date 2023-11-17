@@ -26,12 +26,12 @@ export async function getUpdateOptionParams(
 	const initialized = optionParams.length != 0
 
 	// We need to ensure existing positions are ignored if user specifies this
-	if (!initialized && lpRangeOrders.length > 0 && !withdrawExistingPositions){
-		for (const existingPosition of lpRangeOrders){
+	if (!initialized && lpRangeOrders.length > 0 && !withdrawExistingPositions) {
+		for (const existingPosition of lpRangeOrders) {
 			optionParams.push({
 				market,
 				maturity: existingPosition.maturity,
-				type: existingPosition.isCall ? 'C': 'P',
+				type: existingPosition.isCall ? 'C' : 'P',
 				strike: existingPosition.strike,
 				spotPrice: curPrice,
 				ts,
@@ -243,7 +243,7 @@ function checkForUpdate(
 	isCall: boolean,
 ) {
 	// NOTE: Find option using market/maturity/type/strike (should only be one)
-	// FIXME: what happens if a user dupes orders due to withdrawable set to false?
+	// FIXME: what happens if duplicate orders exist due to withdrawable set to false?
 	const optionIndex = optionParams.findIndex(
 		(option) =>
 			option.market === market &&

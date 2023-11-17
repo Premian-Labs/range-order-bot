@@ -2,7 +2,7 @@
 
 /*
 NOTE: Trade related settings may need to be tweaked from time to time depending on risk,
-market conditions, and changes in available strikes/expirations.
+market conditions, and changes in available strikes/expirations
  */
 import { MarketParams } from '../utils/types'
 import { addresses } from './constants'
@@ -29,7 +29,7 @@ maturities (required): All expirations to trade.  Invalid dates will be rejects 
 running.  Any options that have expired or expire while the bot is running will automatically exercise/settle positions.
 
 strikes (optional): a user can input specific strikes that they would like to trade.  Optionally, if they would like
-to trade all applicable markets (within a delta range), both callSTrikes and putStrikes can be COMPLETELY removed.
+to trade all applicable strikes (within a delta range), BOTH callSTrikes and putStrikes can be COMPLETELY removed.
 In this case the bot will depend on the min/max delta range as the limiting factors and the bot will trade
 everything inbetween.
 
@@ -50,6 +50,7 @@ are priced in USDC but based on the strike price. For example, a 1500 strike
 put at 0.004 is (0.004 * 1500) in USDC terms.
  */
 
+//TODO: what if the user only gives Calls (Puts)? Thinking they are trying to trade only one option type?
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,
@@ -112,7 +113,7 @@ export const defaultSpread = 0.1 //10%
 This is the amount of spot price movement since the last range order update that will force a new
 update of range orders.  It is percentage based and formatted as a decimal (ie 0.01 -> 1%)
  */
-export const spotMoveThreshold = 0.025 // 1%
+export const spotMoveThreshold = 0.01 // 1%
 
 /*
 This is the amount of time in minutes that the spot price & ts for a given market is checked to see
@@ -131,10 +132,14 @@ NOTE: optimal range is likely 1 <-> 24 hrs
 export const timeThresholdHrs = 6 // float expressed in hours
 
 /*
-If set to true, when the bot initialized it will search for existing LP range orders
+If set to true, when the bot is initialized it will search for existing LP range orders
 for each market that is listed in marketParams and withdraw from those positions prior
 to establishing new range orders.
+IMPORTANT: if set to false, those range orders will be completely ignored by the bot.  This
+should only be set to false if manual range orders are present and the user does not want to
+effect them.
  */
+
 export const withdrawExistingPositions = true
 
 /*
