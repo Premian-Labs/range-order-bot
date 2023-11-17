@@ -92,11 +92,11 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	await hydrateStrikes(market, curPrice)
 
 	// NOTE: only run ONCE (initialization) to hydrate range orders per market
-	// IMPORTANT: can ONLY be run if strikes exist in marketParams
+	// IMPORTANT: can ONLY be run if strikes exist in marketParams!
 	lpRangeOrders = await getExistingPositions(market)
 
 	// Initial hydration of option specs for each pool (K,T)
-	// IMPORTANT: can ONLY be run if strikes exist in marketParams
+	// IMPORTANT: can ONLY be run if strikes exist in marketParams!
 	optionParams = await getUpdateOptionParams(
 		optionParams,
 		lpRangeOrders,

@@ -117,7 +117,7 @@ async function processStrike(
 
 	/*
 	NOTE: this is here for contract upgrades that could cause issues with getting
-	old pools that already existed.
+	old pools that already exist.
 	 */
 	let poolAddress: string
 	try {

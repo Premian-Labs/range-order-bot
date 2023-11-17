@@ -15,6 +15,11 @@ import { delay } from '../utils/time'
 
 const blackScholes: BlackScholes = new BlackScholes()
 
+/*
+IMPORTANT: lpRangeOrders will hold all EXISTING and NEW positions. OptionParams should always have
+a record of new and existing positions.  Note that its possible for optionParams to have MORE options than
+actual positions in lpRangeOrders due to filters such at DTE and Delta.
+ */
 export async function getUpdateOptionParams(
 	optionParams: OptionParams[],
 	lpRangeOrders: Position[],
@@ -25,7 +30,11 @@ export async function getUpdateOptionParams(
 	// determine if this is initialization case or not (for down stream processing)
 	const initialized = optionParams.length != 0
 
-	// We need to ensure existing positions are ignored if user specifies this
+	/*
+	NOTE: We need to ensure existing positions are IGNORED if a user specifies this by setting
+	withdrawExistingPositions to false. Since all existing positions are populated into lpRangeOrders
+	we need to populate them into optionParams.  This should only run once.
+	 */
 	if (!initialized && lpRangeOrders.length > 0 && !withdrawExistingPositions) {
 		for (const existingPosition of lpRangeOrders) {
 			optionParams.push({
@@ -75,7 +84,7 @@ async function processCallsAndPuts(
 	maturityString: string,
 	optionParams: OptionParams[],
 ) {
-	// NOTE: we break up by call/put strikes as they may not be the same
+	// NOTE: we break up by call/put strikes as they may not be the same if user populated
 
 	// CALLS
 	await Promise.all(
