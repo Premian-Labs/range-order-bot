@@ -4,7 +4,7 @@ import isEqual from 'lodash.isequal'
 import { IPool, OrderType, formatTokenId } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'
 import { lpAddress } from '../config/constants'
-import { PosKey, Position } from '../utils/types'
+import { PosKey, Position, OptionParams } from '../utils/types'
 import { premia } from '../config/contracts'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
@@ -14,7 +14,9 @@ import moment from 'moment/moment'
 export async function withdrawSettleLiquidity(
 	lpRangeOrders: Position[],
 	market: string,
+	optionParams: OptionParams[]
 ) {
+	// TODO: integrate option params
 	log.app(`Withdrawing liquidity from ${market}`)
 
 	const filteredRangeOrders = lpRangeOrders.filter((rangeOrder: Position) => {

@@ -34,6 +34,7 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	const curPrice = await getSpotPrice(market)
 	const ts = moment.utc().unix()
 
+	// NOTE: for spot failure case on initialization, we just end process
 	if (curPrice === undefined) {
 		log.warning(
 			`Skipping initialization for ${market}, spot price feed is not working`,
@@ -44,23 +45,22 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	marketParams[market].spotPrice = curPrice
 	marketParams[market].ts = ts
 
-	// NOTE: only needed ONCE to hydrate strikes for a given market (if needed)
-	await hydrateStrikes(market)
+	// NOTE: only needed ONCE to hydrate strikes per market (if not provided)
+	await hydrateStrikes(market, curPrice)
 
-	// NOTE: only needed ONCE to hydrate lpRangeOrders for a given market
+	// NOTE: only needed ONCE to hydrate lpRangeOrders per market
 	lpRangeOrders = await getExistingPositions(market)
 
-	if (withdrawExistingPositions && lpRangeOrders.length > 0) {
-		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
-	}
-
 	// Initial hydration of option specs for each pool (K,T)
-	// NOTE: requires strikes to be present for it to work
+	// NOTE: requires strikes to be present for it to work (hydrateStrikes)
 	optionParams = await getUpdateOptionParams(optionParams, market, curPrice, ts)
 
-	// TODO: need to inject optionParams (since it is needed in maintenance case)
+	if (withdrawExistingPositions && lpRangeOrders.length > 0) {
+		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market, optionParams)
+	}
+
 	// NOTE: all markets in optionsParams are deployed
-	lpRangeOrders = await deployLiquidity(lpRangeOrders, market, curPrice)
+	lpRangeOrders = await deployLiquidity(lpRangeOrders, market, curPrice, optionParams)
 
 	return lpRangeOrders
 }
@@ -75,7 +75,9 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 		log.warning(
 			`Cannot get ${market} spot price, withdrawing range orders if any exist`,
 		)
-		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
+		// NOTE: curPrice undefined will set spotOracleFailure to true in optionParams
+		optionParams = await getUpdateOptionParams(optionParams, market, curPrice, ts)
+		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market, optionParams)
 		return lpRangeOrders
 	}
 
@@ -111,15 +113,14 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 		marketParams[market].ts = ts
 
 		// remove any liquidity if present
-		// TODO: inject optionParams to determine what to withdraw
-		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market)
+		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market, optionParams)
 
 		// deploy liquidity in given market using marketParam settings
-		// TODO: inject optionParams to determine what to deposit
 		lpRangeOrders = await deployLiquidity(
 			lpRangeOrders,
 			market,
-			marketParams[market].spotPrice!,
+			curPrice,
+			optionParams
 		)
 	} else {
 		log.info(`No update triggered...`)

@@ -13,7 +13,7 @@ const blackScholes: BlackScholes = new BlackScholes()
 export async function getUpdateOptionParams(
 	optionParams: OptionParams[],
 	market: string,
-	curPrice: number,
+	curPrice: number | undefined,
 	ts: number,
 ) {
 	// determine if this is initialization case or not (for down stream processing)
@@ -40,7 +40,7 @@ export async function getUpdateOptionParams(
 async function processCallsAndPuts(
 	initialized: boolean,
 	market: string,
-	spotPrice: number,
+	spotPrice: number | undefined,
 	ts: number,
 	ttm: number,
 	maturityString: string,
@@ -68,7 +68,7 @@ async function processCallsAndPuts(
 					maturity: maturityString,
 					type: 'C',
 					strike,
-					spotPrice: spotPrice,
+					spotPrice,
 					ts,
 					iv,
 					optionPrice: option?.price,
@@ -76,7 +76,8 @@ async function processCallsAndPuts(
 					theta: option?.theta,
 					vega: option?.vega,
 					cycleOrders: true,
-					ivOracleFailure: iv === undefined
+					ivOracleFailure: iv === undefined,
+					spotOracleFailure: spotPrice === undefined
 				})
 			} else {
 				/*
@@ -115,7 +116,7 @@ async function processCallsAndPuts(
 					maturity: maturityString,
 					type: 'P',
 					strike,
-					spotPrice: spotPrice,
+					spotPrice,
 					ts,
 					iv,
 					optionPrice: option?.price,
@@ -123,7 +124,8 @@ async function processCallsAndPuts(
 					theta: option?.theta,
 					vega: option?.vega,
 					cycleOrders: true,
-					ivOracleFailure: iv === undefined
+					ivOracleFailure: iv === undefined,
+					spotOracleFailure: spotPrice === undefined
 				})
 			} else {
 				// MAINTENANCE CASE
@@ -147,13 +149,18 @@ async function processCallsAndPuts(
 
 async function getGreeksAndIV(
 	market: string,
-	spotPrice: number,
+	spotPrice: number | undefined,
 	strike: number,
 	ttm: number,
 	isCall: boolean,
 	retry = true
 ): Promise<[number | undefined, Option | undefined]> {
 	let iv: number
+
+	if (spotPrice === undefined){
+		return [undefined, undefined]
+	}
+
 	try{
 		iv = parseFloat(formatEther(await ivOracle['getVolatility(address,uint256,uint256,uint256)'](
 			productionTokenAddr[market], // NOTE: we use production addresses only
@@ -191,7 +198,7 @@ function checkForUpdate(
 	strike: number,
 	iv: number | undefined,
 	option: Option | undefined,
-	spotPrice: number,
+	spotPrice: number | undefined,
 	ts: number,
 	isCall: boolean,
 ) {
@@ -204,14 +211,19 @@ function checkForUpdate(
 			option.strike === strike,
 	)
 
-	// NOTE: both should be undefined at the same time
-	if (iv === undefined || option === undefined){
-		optionParams[optionIndex].ivOracleFailure = true
+	/*
+	NOTE: oracle failure cases
+	IMPORTANT: if iv is undefined, so should option.  For this reason, we can safely assume
+	option is not undefined in the rest of the logic (!).
+	 */
+	if (iv === undefined  || spotPrice === undefined){
+		optionParams[optionIndex].ivOracleFailure = iv === undefined
+		optionParams[optionIndex].spotOracleFailure = spotPrice === undefined
 		return optionParams
 	}
 
 	const prevOptionPrice = optionParams[optionIndex].optionPrice
-	const curOptionPrice = option.price
+	const curOptionPrice = option!.price
 
 	// NOTE: if we had a previous oracle failure, treat case similar to initialize case
 	const optionPricePercChange = prevOptionPrice ?
@@ -223,9 +235,9 @@ function checkForUpdate(
 		optionParams[optionIndex].spotPrice = spotPrice
 		optionParams[optionIndex].ts = ts
 		optionParams[optionIndex].iv = iv
-		optionParams[optionIndex].delta = option.delta
-		optionParams[optionIndex].theta = option.theta
-		optionParams[optionIndex].vega = option.vega
+		optionParams[optionIndex].delta = option!.delta
+		optionParams[optionIndex].theta = option!.theta
+		optionParams[optionIndex].vega = option!.vega
 		optionParams[optionIndex].cycleOrders = true
 		optionParams[optionIndex].ivOracleFailure = false
 	}

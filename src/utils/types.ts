@@ -45,7 +45,7 @@ export interface OptionParams {
 	maturity: string
 	type: 'C' | 'P'
 	strike: number
-	spotPrice: number
+	spotPrice: number | undefined
 	ts: number
 	iv: number | undefined
 	optionPrice: number | undefined
@@ -54,4 +54,5 @@ export interface OptionParams {
 	vega: number | undefined
 	cycleOrders: boolean
 	ivOracleFailure: boolean
+	spotOracleFailure: boolean
 }

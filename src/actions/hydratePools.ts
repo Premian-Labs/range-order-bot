@@ -1,6 +1,6 @@
 // noinspection ExceptionCaughtLocallyJS
 
-import { PosKey, Position, MarketParams } from '../utils/types'
+import { PosKey, Position, MarketParams, OptionParams } from '../utils/types'
 import { formatEther, parseEther, formatUnits, parseUnits } from 'ethers'
 import { lpAddress, addresses } from '../config/constants'
 import {
@@ -29,7 +29,9 @@ export async function deployLiquidity(
 	lpRangeOrders: Position[],
 	market: string,
 	spotPrice: number,
+	optionParams: OptionParams[]
 ) {
+	//TODO: integrate option params
 	log.app(`Deploying liquidity for ${market}`)
 
 	try {
