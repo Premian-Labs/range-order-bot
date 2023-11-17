@@ -97,6 +97,7 @@ export async function processStrikes(
 		return lpRangeOrders
 	}
 
+	// FIXME: replace with optionParams object which has what we need.
 	const strikes = await getStrikesAndOptions(
 		market,
 		spotPrice,
@@ -106,6 +107,7 @@ export async function processStrikes(
 		isCall,
 	)
 
+	// FIXME: replace with optionParams object which has what we need.
 	for (const { strike, option } of strikes) {
 		log.info(`Depositing for ${maturityString}-${strike}-${isCall ? 'C' : 'P'}`)
 

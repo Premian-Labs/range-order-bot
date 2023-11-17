@@ -45,9 +45,10 @@ export interface OptionParams {
 	maturity: string
 	type: string
 	strike: number
-	spot: number
+	spotPrice: number
 	ts: number
 	iv: number
+	optionPrice: number
 	delta: number
 	theta: number
 	vega: number

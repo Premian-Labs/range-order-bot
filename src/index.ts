@@ -30,12 +30,11 @@ let optionParams: OptionParams[] = []
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)
 
-	// NOTE: getSpotPrice() returns undefined if multiple oracle attempts fail
-	// TODO: potentially use coingecko API price if chainlink oracle fails
+	// NOTE: may return undefined
 	const curPrice = await getSpotPrice(market)
 	const ts = moment.utc().unix()
 
-	if (!curPrice) {
+	if (curPrice === undefined) {
 		log.warning(
 			`Skipping initialization for ${market}, spot price feed is not working`,
 		)
@@ -45,10 +44,10 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	marketParams[market].spotPrice = curPrice
 	marketParams[market].ts = ts
 
-	//NOTE: strikes are an OPTIONAL user input. If not provided, it needs hydration
+	// NOTE: only needed ONCE to hydrate strikes for a given market (if needed)
 	await hydrateStrikes(market)
 
-	// NOTE: only needed once to hydrate lpRangeOrders
+	// NOTE: only needed ONCE to hydrate lpRangeOrders for a given market
 	lpRangeOrders = await getExistingPositions(market)
 
 	if (withdrawExistingPositions && lpRangeOrders.length > 0) {
@@ -56,6 +55,7 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	}
 
 	// Initial hydration of option specs for each pool (K,T)
+	// NOTE: requires strikes to be present for it to work
 	optionParams = await getUpdateOptionParams(optionParams, market, curPrice, ts)
 
 	// TODO: need to inject optionParams (since it is needed in maintenance case)
@@ -71,7 +71,7 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 	const ts = moment.utc().unix() // seconds
 	const curPrice = await getSpotPrice(market)
 
-	if (!curPrice) {
+	if (curPrice === undefined) {
 		log.warning(
 			`Cannot get ${market} spot price, withdrawing range orders if any exist`,
 		)

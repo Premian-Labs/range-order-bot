@@ -27,6 +27,6 @@ export async function getSpotPrice(market: string, retry: boolean = true) {
 			)
 		}
 	}
-
+	// TODO: potentially use coingecko API price if chainlink oracle fails
 	return undefined
 }
