@@ -100,6 +100,8 @@ export async function processStrikes(
 	}
 
 	// FIXME: replace with optionParams object which has what we need.
+	// TODO: we want a filtered list from optionParams to iterate through
+	// TODO: add delta filter with appropriate logging
 	const strikes = await getStrikesAndOptions(
 		market,
 		spotPrice,
@@ -109,7 +111,9 @@ export async function processStrikes(
 		isCall,
 	)
 
-	// FIXME: replace with optionParams object which has what we need.
+
+	// FIXME: replace with iterating through filtered optionParams
+	// TODO: It should only be markets that we should be depositing into
 	for (const { strike, option } of strikes) {
 		log.info(`Depositing for ${maturityString}-${strike}-${isCall ? 'C' : 'P'}`)
 

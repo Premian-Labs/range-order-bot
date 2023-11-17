@@ -291,7 +291,7 @@ function checkForUpdate(
 		optionParams[optionIndex].spotPrice = spotPrice
 		optionParams[optionIndex].ts = ts
 		optionParams[optionIndex].iv = iv
-		optionParams[optionIndex].optionPrice
+		optionParams[optionIndex].optionPrice = curOptionPrice
 		optionParams[optionIndex].delta = option!.delta
 		optionParams[optionIndex].theta = option!.theta
 		optionParams[optionIndex].vega = option!.vega

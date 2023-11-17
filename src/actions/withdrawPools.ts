@@ -16,7 +16,6 @@ export async function withdrawSettleLiquidity(
 	market: string,
 	optionParams: OptionParams[],
 ) {
-	// TODO: integrate option params
 	log.app(`Withdrawing liquidity from ${market}`)
 
 	const filteredRangeOrders = lpRangeOrders.filter((rangeOrder: Position) => {
@@ -35,6 +34,9 @@ export async function withdrawSettleLiquidity(
 		are independent of each other
 	 */
 	for (const filteredRangeOrder of filteredRangeOrders) {
+		// TODO: if range orders are withdrawable AND cycleOrders is true (optionsParams), process withdraw
+		// OR process on oracle failure on withdrawable positions (regardless of cycleOrders)
+		// TODO: if ivOracleFailure OR spotOracleFailure has occurred, process withdraw
 		log.info(
 			`Processing withdraw for size: ${filteredRangeOrder.depositSize} in ${
 				filteredRangeOrder.market
@@ -105,7 +107,7 @@ export async function withdrawSettleLiquidity(
 
 			await withdrawPosition(executablePool, posKey, poolBalance, exp)
 
-			// remove range order from array if settlement is successful
+			// remove range order from array if withdraw/settle is successful
 			lpRangeOrders = lpRangeOrders.filter(
 				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
 			)

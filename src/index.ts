@@ -105,8 +105,8 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 		ts,
 	)
 
-	// Optional user config to start fresh
-	// NOTE: if withdrawExistingPosition => withdrawable is false (will not process withdraw)
+	// Optional user config (withdrawExistingPositions) to start fresh
+	// NOTE: optionParam uses withdrawable boolean to determine eligibility of range order
 	if (lpRangeOrders.length > 0) {
 		lpRangeOrders = await withdrawSettleLiquidity(
 			lpRangeOrders,
@@ -115,7 +115,7 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 		)
 	}
 
-	// NOTE: all markets in optionsParams are deployed
+
 	lpRangeOrders = await deployLiquidity(
 		lpRangeOrders,
 		market,
