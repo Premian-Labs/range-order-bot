@@ -103,10 +103,20 @@ function getSurroundingStrikes(
 	let increment = getInterval(minStrike)
 	for (let i = properMin; i <= properMax; i += increment) {
 		increment = getInterval(i)
-		strikes.push(i)
+		strikes.push(truncateFloat(i, increment))
 	}
 
 	return strikes
+}
+
+// Fixes JS float imprecision error
+function truncateFloat(input: number, increment: number): number {
+	const orderOfIncrement = Math.floor(Math.log10(increment))
+	if (orderOfIncrement < 0) {
+		return Number(input.toFixed(-orderOfIncrement))
+	} else {
+		return Number(input.toFixed(0))
+	}
 }
 
 function roundUpTo(initial: number, rounding: number): number {
