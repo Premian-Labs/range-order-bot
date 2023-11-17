@@ -1,12 +1,11 @@
 import { MarketParams } from './types'
-import { BigNumberish, formatEther, parseEther, toBigInt } from 'ethers'
+import { formatEther, parseEther } from 'ethers'
 import { productionTokenAddr } from '../config/constants'
 import { maxDelta, minDelta, riskFreeRate } from '../config'
 import { BlackScholes, Option } from '@uqee/black-scholes'
 import { getTTM } from './dates'
 import { ivOracle } from '../config/contracts'
 import { log } from './logs'
-import { WAD_DECIMALS, ZERO_BI, parseNumber } from '@premia/v3-sdk'
 
 const blackScholes: BlackScholes = new BlackScholes()
 
@@ -20,16 +19,8 @@ export async function getStrikesAndOptions(
 ) {
 	//NOTE: we know there are values as we populate them in hydrateStrikes()
 	const strikes = isCall
-		? marketParams[market].callStrikes
-		: marketParams[market].putStrikes
-
-	/*
-	getSuggestedStrike() =>  will look for valid strikes from (.5 * spot) to (2 * spot) using
-	our algorithmic logic for valid strike intervals.
-	 */
-	const suggestedStrikes =
-		strikes ??
-		getSurroundingStrikes(spotPrice)
+		? marketParams[market].callStrikes!
+		: marketParams[market].putStrikes!
 
 	const validStrikes: {
 		strike: number
@@ -40,7 +31,7 @@ export async function getStrikesAndOptions(
 
 	// NOTE: we use a multicallProvider for the ivOracle query
 	await Promise.all(
-		suggestedStrikes.map(async (strike) => {
+		strikes.map(async (strike) => {
 			const iv = await ivOracle[
 				'getVolatility(address,uint256,uint256,uint256)'
 			](
@@ -87,7 +78,7 @@ export async function getStrikesAndOptions(
 	return validStrikes
 }
 
-function getSurroundingStrikes(
+export function getSurroundingStrikes(
 	spotPrice: number,
 	maxProportion = 2,
 ) {
