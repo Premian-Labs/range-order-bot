@@ -55,4 +55,5 @@ export interface OptionParams {
 	cycleOrders: boolean
 	ivOracleFailure: boolean
 	spotOracleFailure: boolean
+	withdrawable: boolean
 }

@@ -1,5 +1,10 @@
-import { OptionParams } from '../utils/types'
-import { marketParams, riskFreeRate, defaultSpread } from '../config'
+import { OptionParams, Position } from '../utils/types'
+import {
+	marketParams,
+	riskFreeRate,
+	defaultSpread,
+	withdrawExistingPositions,
+} from '../config'
 import { createExpiration, getTTM } from '../utils/dates'
 import { BlackScholes, Option } from '@uqee/black-scholes'
 import { ivOracle } from '../config/contracts'
@@ -12,12 +17,36 @@ const blackScholes: BlackScholes = new BlackScholes()
 
 export async function getUpdateOptionParams(
 	optionParams: OptionParams[],
+	lpRangeOrders: Position[],
 	market: string,
 	curPrice: number | undefined,
 	ts: number,
 ) {
 	// determine if this is initialization case or not (for down stream processing)
 	const initialized = optionParams.length != 0
+
+	// We need to ensure existing positions are ignored if user specifies this
+	if (!initialized && lpRangeOrders.length > 0 && !withdrawExistingPositions){
+		for (const existingPosition of lpRangeOrders){
+			optionParams.push({
+				market,
+				maturity: existingPosition.maturity,
+				type: existingPosition.isCall ? 'C': 'P',
+				strike: existingPosition.strike,
+				spotPrice: curPrice,
+				ts,
+				iv: undefined,
+				optionPrice: undefined,
+				delta: undefined,
+				theta: undefined,
+				vega: undefined,
+				cycleOrders: true,
+				ivOracleFailure: false,
+				spotOracleFailure: false,
+				withdrawable: false, // This is the critical boolean
+			})
+		}
+	}
 
 	// cycle through each maturity to create/update optionsParams
 	for (const maturityString of marketParams[market].maturities) {
@@ -47,8 +76,9 @@ async function processCallsAndPuts(
 	optionParams: OptionParams[],
 ) {
 	// NOTE: we break up by call/put strikes as they may not be the same
+
+	// CALLS
 	await Promise.all(
-		// CALLS
 		marketParams[market].callStrikes!.map(async (strike) => {
 			const [iv, option] = await getGreeksAndIV(
 				market,
@@ -77,7 +107,8 @@ async function processCallsAndPuts(
 					vega: option?.vega,
 					cycleOrders: true,
 					ivOracleFailure: iv === undefined,
-					spotOracleFailure: spotPrice === undefined
+					spotOracleFailure: spotPrice === undefined,
+					withdrawable: true,
 				})
 			} else {
 				/*
@@ -99,8 +130,8 @@ async function processCallsAndPuts(
 		}),
 	)
 
+	// PUTS
 	await Promise.all(
-		// PUTS
 		marketParams[market].putStrikes!.map(async (strike) => {
 			const [iv, option] = await getGreeksAndIV(
 				market,
@@ -125,7 +156,8 @@ async function processCallsAndPuts(
 					vega: option?.vega,
 					cycleOrders: true,
 					ivOracleFailure: iv === undefined,
-					spotOracleFailure: spotPrice === undefined
+					spotOracleFailure: spotPrice === undefined,
+					withdrawable: true,
 				})
 			} else {
 				// MAINTENANCE CASE
@@ -153,28 +185,36 @@ async function getGreeksAndIV(
 	strike: number,
 	ttm: number,
 	isCall: boolean,
-	retry = true
+	retry = true,
 ): Promise<[number | undefined, Option | undefined]> {
 	let iv: number
 
-	if (spotPrice === undefined){
+	if (spotPrice === undefined) {
 		return [undefined, undefined]
 	}
 
-	try{
-		iv = parseFloat(formatEther(await ivOracle['getVolatility(address,uint256,uint256,uint256)'](
-			productionTokenAddr[market], // NOTE: we use production addresses only
-			parseEther(spotPrice.toString()),
-			parseEther(strike.toString()),
-			parseEther(ttm.toLocaleString(undefined, { maximumFractionDigits: 18 })),
-		)))
-	}catch(err){
+	try {
+		iv = parseFloat(
+			formatEther(
+				await ivOracle['getVolatility(address,uint256,uint256,uint256)'](
+					productionTokenAddr[market], // NOTE: we use production addresses only
+					parseEther(spotPrice.toString()),
+					parseEther(strike.toString()),
+					parseEther(
+						ttm.toLocaleString(undefined, { maximumFractionDigits: 18 }),
+					),
+				),
+			),
+		)
+	} catch (err) {
 		await delay(2000)
-		if (retry){
+		if (retry) {
 			return getGreeksAndIV(market, spotPrice, strike, ttm, isCall, false)
-		}else{
+		} else {
 			log.warning(`Failed to get IV for ${market}-${strike}-${isCall}...`)
-			log.warning(`Withdrawing range orders for ${market}-${strike}-${isCall} pool if they exist..`)
+			log.warning(
+				`Withdrawing range orders for ${market}-${strike}-${isCall} pool if they exist..`,
+			)
 			return [undefined, undefined]
 		}
 	}
@@ -203,6 +243,7 @@ function checkForUpdate(
 	isCall: boolean,
 ) {
 	// NOTE: Find option using market/maturity/type/strike (should only be one)
+	// FIXME: what happens if a user dupes orders due to withdrawable set to false?
 	const optionIndex = optionParams.findIndex(
 		(option) =>
 			option.market === market &&
@@ -216,7 +257,7 @@ function checkForUpdate(
 	IMPORTANT: if iv is undefined, so should option.  For this reason, we can safely assume
 	option is not undefined in the rest of the logic (!).
 	 */
-	if (iv === undefined  || spotPrice === undefined){
+	if (iv === undefined || spotPrice === undefined) {
 		optionParams[optionIndex].ivOracleFailure = iv === undefined
 		optionParams[optionIndex].spotOracleFailure = spotPrice === undefined
 		return optionParams
@@ -226,12 +267,17 @@ function checkForUpdate(
 	const curOptionPrice = option!.price
 
 	// NOTE: if we had a previous oracle failure, treat case similar to initialize case
-	const optionPricePercChange = prevOptionPrice ?
-		Math.abs(curOptionPrice - prevOptionPrice) / prevOptionPrice : 0
+	const optionPricePercChange = prevOptionPrice
+		? Math.abs(curOptionPrice - prevOptionPrice) / prevOptionPrice
+		: 0
 
 	// NOTE: if option requires withdraw/reDeposit then update all option related values
 	// If previous cycle had an iv failure, but now back online, update oracle failure state
-	if (optionPricePercChange > defaultSpread || prevOptionPrice === undefined) {
+	// IMPORTANT: if the user told us not to touch existing positions, we should never update them.
+	if (
+		(optionPricePercChange > defaultSpread || prevOptionPrice === undefined) &&
+		optionParams[optionIndex].withdrawable
+	) {
 		optionParams[optionIndex].spotPrice = spotPrice
 		optionParams[optionIndex].ts = ts
 		optionParams[optionIndex].iv = iv
@@ -240,6 +286,7 @@ function checkForUpdate(
 		optionParams[optionIndex].vega = option!.vega
 		optionParams[optionIndex].cycleOrders = true
 		optionParams[optionIndex].ivOracleFailure = false
+		optionParams[optionIndex].spotOracleFailure = false
 	}
 
 	return optionParams

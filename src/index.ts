@@ -34,26 +34,37 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	const curPrice = await getSpotPrice(market)
 	const ts = moment.utc().unix()
 
-	// NOTE: for spot failure case on initialization, we terminate process
 	if (curPrice === undefined) {
 		log.warning(
 			`Skipping initialization for ${market}, spot price feed is not working`,
 		)
 
-		// IMPORTANT: if user gave strikes, we can getExistingPositions to withdraw
-		if (withdrawExistingPositions && marketParams[market].callStrikes && marketParams[market].putStrikes){
-			log.warning(
-				'Attempting to withdraw existing positions...'
-			)
+		// IMPORTANT: if user gave BOTH strikes, we can getExistingPositions to withdraw; don't need hydrateStrikes()
+		if (
+			withdrawExistingPositions &&
+			marketParams[market].callStrikes &&
+			marketParams[market].putStrikes
+		) {
+			log.warning('Attempting to withdraw existing positions...')
 
 			// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
 			lpRangeOrders = await getExistingPositions(market)
 
 			// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
-			optionParams = await getUpdateOptionParams(optionParams, market, curPrice, ts)
+			optionParams = await getUpdateOptionParams(
+				optionParams,
+				lpRangeOrders,
+				market,
+				curPrice,
+				ts,
+			)
 
-			if (withdrawExistingPositions && lpRangeOrders.length > 0) {
-				lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market, optionParams)
+			if (lpRangeOrders.length > 0) {
+				lpRangeOrders = await withdrawSettleLiquidity(
+					lpRangeOrders,
+					market,
+					optionParams,
+				)
 			}
 		}
 
@@ -63,23 +74,40 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	marketParams[market].spotPrice = curPrice
 	marketParams[market].ts = ts
 
-	// NOTE: only needed ONCE to hydrate strikes per market (if not provided)
+	// NOTE: only run ONCE (initialization) to hydrate strikes in marketParams (if not provided)
 	await hydrateStrikes(market, curPrice)
 
-	// NOTE: only needed in initialization case for withdrawals
-	// IMPORTANT: can ONLY be run if strikes exist	in marketParams
+	// NOTE: only run ONCE (initialization) to hydrate range orders per market
+	// IMPORTANT: can ONLY be run if strikes exist in marketParams
 	lpRangeOrders = await getExistingPositions(market)
 
 	// Initial hydration of option specs for each pool (K,T)
-	// NOTE: requires strikes to be present for it to work (hydrateStrikes)
-	optionParams = await getUpdateOptionParams(optionParams, market, curPrice, ts)
+	// IMPORTANT: can ONLY be run if strikes exist in marketParams
+	optionParams = await getUpdateOptionParams(
+		optionParams,
+		lpRangeOrders,
+		market,
+		curPrice,
+		ts,
+	)
 
+	// Optional user config to start fresh
 	if (withdrawExistingPositions && lpRangeOrders.length > 0) {
-		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market, optionParams)
+		lpRangeOrders = await withdrawSettleLiquidity(
+			lpRangeOrders,
+			market,
+			optionParams,
+		)
 	}
 
 	// NOTE: all markets in optionsParams are deployed
-	lpRangeOrders = await deployLiquidity(lpRangeOrders, market, curPrice, optionParams)
+	// TODO: if withdrawExistingPosition is false, will we dupe range orders?
+	lpRangeOrders = await deployLiquidity(
+		lpRangeOrders,
+		market,
+		curPrice,
+		optionParams,
+	)
 
 	// initialization path complete
 	initialized = true
@@ -88,6 +116,12 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 }
 
 async function maintainPositions(lpRangeOrders: Position[], market: string) {
+	/*
+	TODO: if withdrawExistingPositions is set to false, what happens in the maintenance cycle?
+	The way this is set up, the user will end up cycling through ALL (new and existing) positions
+	and will cause those positions to be withdrawn.
+	*/
+
 	log.app(`Running position maintenance process for ${market}`)
 
 	const ts = moment.utc().unix() // seconds
@@ -98,8 +132,18 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 			`Cannot get ${market} spot price, withdrawing range orders if any exist`,
 		)
 		// NOTE: curPrice undefined will set spotOracleFailure to true in optionParams
-		optionParams = await getUpdateOptionParams(optionParams, market, curPrice, ts)
-		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market, optionParams)
+		optionParams = await getUpdateOptionParams(
+			optionParams,
+			lpRangeOrders,
+			market,
+			curPrice,
+			ts,
+		)
+		lpRangeOrders = await withdrawSettleLiquidity(
+			lpRangeOrders,
+			market,
+			optionParams,
+		)
 		return lpRangeOrders
 	}
 
@@ -126,6 +170,7 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 
 		optionParams = await getUpdateOptionParams(
 			optionParams,
+			lpRangeOrders,
 			market,
 			curPrice,
 			ts,
@@ -135,14 +180,18 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 		marketParams[market].ts = ts
 
 		// remove any liquidity if present
-		lpRangeOrders = await withdrawSettleLiquidity(lpRangeOrders, market, optionParams)
+		lpRangeOrders = await withdrawSettleLiquidity(
+			lpRangeOrders,
+			market,
+			optionParams,
+		)
 
 		// deploy liquidity in given market using marketParam settings
 		lpRangeOrders = await deployLiquidity(
 			lpRangeOrders,
 			market,
 			curPrice,
-			optionParams
+			optionParams,
 		)
 	} else {
 		log.info(`No update triggered...`)
@@ -173,33 +222,31 @@ async function updateMarket(lpRangeOrders: Position[], market: string) {
 async function runRangeOrderBot() {
 	log.app('Starting range order bot...')
 
-	if (!initialized) {
-		// Set ALL collateral approvals (base & quote) to max before first deposit cycle
-		if (maxCollateralApproved) {
-			log.info(`Setting approvals for collateral tokens prior to deposits`)
+	// Set ALL collateral approvals (base & quote) to max before first deposit cycle
+	if (!initialized && maxCollateralApproved) {
+		log.info(`Setting approvals for collateral tokens prior to deposits`)
 
-			// Approvals for call base tokens
-			for (const market of Object.keys(marketParams)) {
-				const token = premia.contracts.getTokenContract(
-					marketParams[market].address,
-					premia.signer as any,
-				)
-
-				await setApproval(MaxUint256, token)
-
-				log.info(`${market} approval set to MAX`)
-			}
-
-			// Approval for quote token (USDC only)
+		// Approvals for call base tokens
+		for (const market of Object.keys(marketParams)) {
 			const token = premia.contracts.getTokenContract(
-				addresses.tokens.USDC,
+				marketParams[market].address,
 				premia.signer as any,
 			)
 
 			await setApproval(MaxUint256, token)
 
-			log.info(`USDC approval set to MAX`)
+			log.info(`${market} approval set to MAX`)
 		}
+
+		// Approval for quote token (USDC only)
+		const token = premia.contracts.getTokenContract(
+			addresses.tokens.USDC,
+			premia.signer as any,
+		)
+
+		await setApproval(MaxUint256, token)
+
+		log.info(`USDC approval set to MAX`)
 	}
 
 	// iterate through each market to determine is liquidity needs to be deployed/updated

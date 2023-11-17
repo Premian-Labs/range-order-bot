@@ -29,7 +29,7 @@ export async function deployLiquidity(
 	lpRangeOrders: Position[],
 	market: string,
 	spotPrice: number,
-	optionParams: OptionParams[]
+	optionParams: OptionParams[],
 ) {
 	//TODO: integrate option params
 	log.app(`Deploying liquidity for ${market}`)

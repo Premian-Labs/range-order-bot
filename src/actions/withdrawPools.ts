@@ -14,7 +14,7 @@ import moment from 'moment/moment'
 export async function withdrawSettleLiquidity(
 	lpRangeOrders: Position[],
 	market: string,
-	optionParams: OptionParams[]
+	optionParams: OptionParams[],
 ) {
 	// TODO: integrate option params
 	log.app(`Withdrawing liquidity from ${market}`)
