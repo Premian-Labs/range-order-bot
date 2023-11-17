@@ -99,9 +99,12 @@ export async function processStrikes(
 		return lpRangeOrders
 	}
 
-	// FIXME: replace with optionParams object which has what we need.
-	// TODO: we want a filtered list from optionParams to iterate through
-	// TODO: add delta filter with appropriate logging
+	// FIXME: replace with optionParams object which has what we need
+	// TODO: we want a filtered list of optionParams to iterate through
+	// TODO: 1st filter: filter by market, maturity, type (core)
+	// TODO: 2nd filter: check cycleOrders & withdrawable is true, ivOracleFailure & spotOracleFailure is false
+	// NOTE: if withdrawable is true, it also means we can deposit (assuming cycleOrders is true)
+	// TODO: add min/max delta filter  & minDTE filter with appropriate logging
 	const strikes = await getStrikesAndOptions(
 		market,
 		spotPrice,
@@ -113,7 +116,7 @@ export async function processStrikes(
 
 
 	// FIXME: replace with iterating through filtered optionParams
-	// TODO: It should only be markets that we should be depositing into
+	// TODO: after making ALL deposits, set optionParam-> cycleOrders to false
 	for (const { strike, option } of strikes) {
 		log.info(`Depositing for ${maturityString}-${strike}-${isCall ? 'C' : 'P'}`)
 

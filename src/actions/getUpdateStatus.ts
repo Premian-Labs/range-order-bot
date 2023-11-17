@@ -19,7 +19,14 @@ const blackScholes: BlackScholes = new BlackScholes()
 IMPORTANT: lpRangeOrders will hold all EXISTING and NEW positions. OptionParams should always have
 a record of new and existing positions.  Note that its possible for optionParams to have MORE options than
 actual positions in lpRangeOrders due to filters such at DTE and Delta.
+
+CHEATSHEET:
+cycleOrders = true/False && withdrawable = false ======> don't touch
+cycleOrders = true && withdrawable = true =========> cycle market (withdraw & deposit)
+cycleOrders = false && withdrawable = true ===========> tradable but not ready to cycle market
+ivOracleFailure = true OR spotOracleFailure = true ===============> withdraw only
  */
+
 export async function getUpdateOptionParams(
 	optionParams: OptionParams[],
 	lpRangeOrders: Position[],
