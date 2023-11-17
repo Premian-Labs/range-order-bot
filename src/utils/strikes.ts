@@ -20,8 +20,16 @@ export async function getStrikesAndOptions(
 ) {
 	//NOTE: we know there are values as we populate them in hydrateStrikes()
 	const strikes = isCall
-		? marketParams[market].callStrikes!
-		: marketParams[market].putStrikes!
+		? marketParams[market].callStrikes
+		: marketParams[market].putStrikes
+
+	/*
+	getSuggestedStrike() =>  will look for valid strikes from (.5 * spot) to (2 * spot) using
+	our algorithmic logic for valid strike intervals.
+	 */
+	const suggestedStrikes =
+		strikes ??
+		getSurroundingStrikes(spotPrice)
 
 	const validStrikes: {
 		strike: number
@@ -32,7 +40,7 @@ export async function getStrikesAndOptions(
 
 	// NOTE: we use a multicallProvider for the ivOracle query
 	await Promise.all(
-		strikes.map(async (strike) => {
+		suggestedStrikes.map(async (strike) => {
 			const iv = await ivOracle[
 				'getVolatility(address,uint256,uint256,uint256)'
 			](
@@ -79,74 +87,34 @@ export async function getStrikesAndOptions(
 	return validStrikes
 }
 
-// TODO: review code logic
-export function getSurroundingStrikes(
-	spotPrice: BigNumberish,
-	decimals: number | bigint = WAD_DECIMALS,
-): bigint[] {
-	const _decimals = Number(decimals)
-	const _spotPrice = toBigInt(spotPrice)
+function getSurroundingStrikes(
+	spotPrice: number,
+	maxProportion = 2,
+) {
+	const minStrike = spotPrice / maxProportion
+	const maxStrike = spotPrice * maxProportion
 
-	let increment = getStrikeIncrementBelow(spotPrice, _decimals)
-
-	if (increment === ZERO_BI) {
-		return []
-	}
-
-	const maxProportion = 2n
-
-	const minStrike = _spotPrice / maxProportion
-	const maxStrike = _spotPrice * maxProportion
-
-	let minStrikeRounded = roundToNearest(minStrike, increment)
-	let maxStrikeRounded = roundToNearest(maxStrike, increment)
-
-	if (minStrikeRounded > minStrike) {
-		minStrikeRounded -= increment
-	}
-
-	if (maxStrikeRounded < maxStrike) {
-		maxStrikeRounded += increment
-	}
+	const intervalAtMinStrike = getInterval(minStrike)
+	const intervalAtMaxStrike = getInterval(maxStrike)
+	const properMin = roundUpTo(minStrike, intervalAtMinStrike)
+	const properMax = roundUpTo(maxStrike, intervalAtMaxStrike)
 
 	const strikes = []
-	for (let i = minStrikeRounded; i <= maxStrikeRounded; i += increment) {
+	let increment = getInterval(minStrike)
+	for (let i = properMin; i <= properMax; i += increment) {
+		increment = getInterval(i)
 		strikes.push(i)
 	}
 
 	return strikes
 }
 
-function getStrikeIncrementBelow(
-	spotPrice: BigNumberish,
-	decimals: number = Number(WAD_DECIMALS),
-): bigint {
-	const price = parseNumber(spotPrice, decimals)
-	let exponent = Math.floor(Math.log10(price))
-	const multiplier = price >= 5 * 10 ** exponent ? 1 : 5
-
-	if (multiplier === 5) {
-		exponent -= 1
-	}
-
-	if (exponent - 1 < 0) {
-		return (
-			(toBigInt(multiplier) * toBigInt(10) ** toBigInt(decimals)) /
-			toBigInt(10) ** toBigInt(Math.abs(exponent - 1))
-		)
-	}
-
-	return (
-		toBigInt(multiplier) *
-		toBigInt(10) ** toBigInt(decimals) *
-		toBigInt(10) ** toBigInt(exponent - 1)
-	)
+function roundUpTo(initial: number, rounding: number): number {
+	return Math.ceil(initial / rounding) * rounding
 }
 
-function roundToNearest(value: bigint, nearest: bigint): bigint {
-	if (nearest === ZERO_BI) {
-		return value
-	}
-
-	return (value / nearest) * nearest
+function getInterval(price: number): number {
+	const orderOfTens = Math.floor(Math.log10(price))
+	const base = price / (10 ** (orderOfTens))
+	return base < 5 ? 10 ** (orderOfTens - 1) : 5 * (10 ** (orderOfTens - 1))
 }
