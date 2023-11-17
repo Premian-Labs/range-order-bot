@@ -50,7 +50,6 @@ are priced in USDC but based on the strike price. For example, a 1500 strike
 put at 0.004 is (0.004 * 1500) in USDC terms.
  */
 
-//TODO: what if the user only gives Calls (Puts)? Thinking they are trying to trade only one option type?
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,

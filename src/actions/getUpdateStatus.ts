@@ -243,18 +243,19 @@ function checkForUpdate(
 	isCall: boolean,
 ) {
 	// NOTE: Find option using market/maturity/type/strike (should only be one)
-	// FIXME: what happens if duplicate orders exist due to withdrawable set to false?
+	// NOTE: We ignore existing positions that are non-withdrawable
 	const optionIndex = optionParams.findIndex(
 		(option) =>
 			option.market === market &&
 			option.maturity === maturityString &&
 			option.type === (isCall ? 'C' : 'P') &&
-			option.strike === strike,
+			option.strike === strike &&
+			option.withdrawable,
 	)
 
 	/*
-	NOTE: oracle failure cases
-	IMPORTANT: if iv is undefined, so should option.  For this reason, we can safely assume
+	NOTE: CURRENT oracle failure cases
+	IMPORTANT: if iv is undefined, so should option(price & greeks).  For this reason, we can safely assume
 	option is not undefined in the rest of the logic (!).
 	 */
 	if (iv === undefined || spotPrice === undefined) {
@@ -271,16 +272,17 @@ function checkForUpdate(
 		? Math.abs(curOptionPrice - prevOptionPrice) / prevOptionPrice
 		: 0
 
-	// NOTE: if option requires withdraw/reDeposit then update all option related values
-	// If previous cycle had an iv failure, but now back online, update oracle failure state
-	// IMPORTANT: if the user told us not to touch existing positions, we should never update them.
-	if (
-		(optionPricePercChange > defaultSpread || prevOptionPrice === undefined) &&
-		optionParams[optionIndex].withdrawable
-	) {
+	/*
+	NOTE: if option requires withdraw/reDeposit then update all option related values
+	IMPORTANT: this is initiate a withdrawal/deposit cycle if  EITHER and existing position
+	moved or, we previously withdrew due to an oracle failure and now its back online.
+	 */
+	if (optionPricePercChange > defaultSpread || prevOptionPrice === undefined) {
+		//NOTE: these are all non-static values in optionParams
 		optionParams[optionIndex].spotPrice = spotPrice
 		optionParams[optionIndex].ts = ts
 		optionParams[optionIndex].iv = iv
+		optionParams[optionIndex].optionPrice
 		optionParams[optionIndex].delta = option!.delta
 		optionParams[optionIndex].theta = option!.theta
 		optionParams[optionIndex].vega = option!.vega
