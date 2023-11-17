@@ -4,11 +4,12 @@ import { createExpiration, getTTM } from '../utils/dates'
 import { BlackScholes, Option } from '@uqee/black-scholes'
 import { ivOracle } from '../config/contracts'
 import { productionTokenAddr } from '../config/constants'
-import { formatEther, parseEther } from 'ethers/lib.esm'
+import { formatEther, parseEther } from 'ethers'
+import { log } from '../utils/logs'
+import { delay } from '../utils/time'
 
 const blackScholes: BlackScholes = new BlackScholes()
 
-//TODO: should we handle chronic IV failure in here (aka signal to withdraw all range orders)
 export async function getUpdateOptionParams(
 	optionParams: OptionParams[],
 	market: string,
@@ -58,7 +59,8 @@ async function processCallsAndPuts(
 			)
 			/*
                 INITIALIZATION CASE: No values have been established. We need a baseline. Update is set to true which
-                will enable initial deposits.
+                will enable initial deposits. If there is IV oracle failure, we set iv & option params to undefined and
+                set a failure boolean which can be used to determine emergency withdraws if positions exist
              */
 			if (!initialized) {
 				optionParams.push({
@@ -69,11 +71,12 @@ async function processCallsAndPuts(
 					spotPrice: spotPrice,
 					ts,
 					iv,
-					optionPrice: option.price,
-					delta: option.delta,
-					theta: option.theta,
-					vega: option.vega,
-					update: true,
+					optionPrice: option?.price,
+					delta: option?.delta,
+					theta: option?.theta,
+					vega: option?.vega,
+					cycleOrders: true,
+					ivOracleFailure: iv === undefined
 				})
 			} else {
 				/*
@@ -115,11 +118,12 @@ async function processCallsAndPuts(
 					spotPrice: spotPrice,
 					ts,
 					iv,
-					optionPrice: option.price,
-					delta: option.delta,
-					theta: option.theta,
-					vega: option.vega,
-					update: true,
+					optionPrice: option?.price,
+					delta: option?.delta,
+					theta: option?.theta,
+					vega: option?.vega,
+					cycleOrders: true,
+					ivOracleFailure: iv === undefined
 				})
 			} else {
 				// MAINTENANCE CASE
@@ -147,13 +151,26 @@ async function getGreeksAndIV(
 	strike: number,
 	ttm: number,
 	isCall: boolean,
-): Promise<[number, Option]> {
-	const iv = parseFloat(formatEther(await ivOracle['getVolatility(address,uint256,uint256,uint256)'](
-		productionTokenAddr[market], // NOTE: we use production addresses only
-		parseEther(spotPrice.toString()),
-		parseEther(strike.toString()),
-		parseEther(ttm.toLocaleString(undefined, { maximumFractionDigits: 18 })),
-	)))
+	retry = true
+): Promise<[number | undefined, Option | undefined]> {
+	let iv: number
+	try{
+		iv = parseFloat(formatEther(await ivOracle['getVolatility(address,uint256,uint256,uint256)'](
+			productionTokenAddr[market], // NOTE: we use production addresses only
+			parseEther(spotPrice.toString()),
+			parseEther(strike.toString()),
+			parseEther(ttm.toLocaleString(undefined, { maximumFractionDigits: 18 })),
+		)))
+	}catch(err){
+		await delay(2000)
+		if (retry){
+			return getGreeksAndIV(market, spotPrice, strike, ttm, isCall, false)
+		}else{
+			log.warning(`Failed to get IV for ${market}-${strike}-${isCall}...`)
+			log.warning(`Withdrawing range orders for ${market}-${strike}-${isCall} pool if they exist..`)
+			return [undefined, undefined]
+		}
+	}
 
 	const option: Option = blackScholes.option({
 		rate: riskFreeRate,
@@ -172,8 +189,8 @@ function checkForUpdate(
 	market: string,
 	maturityString: string,
 	strike: number,
-	iv: number,
-	option: Option,
+	iv: number | undefined,
+	option: Option | undefined,
 	spotPrice: number,
 	ts: number,
 	isCall: boolean,
@@ -187,21 +204,30 @@ function checkForUpdate(
 			option.strike === strike,
 	)
 
+	// NOTE: both should be undefined at the same time
+	if (iv === undefined || option === undefined){
+		optionParams[optionIndex].ivOracleFailure = true
+		return optionParams
+	}
+
 	const prevOptionPrice = optionParams[optionIndex].optionPrice
 	const curOptionPrice = option.price
 
-	const optionPricePercChange =
-		Math.abs(curOptionPrice - prevOptionPrice) / prevOptionPrice
+	// NOTE: if we had a previous oracle failure, treat case similar to initialize case
+	const optionPricePercChange = prevOptionPrice ?
+		Math.abs(curOptionPrice - prevOptionPrice) / prevOptionPrice : 0
 
 	// NOTE: if option requires withdraw/reDeposit then update all option related values
-	if (optionPricePercChange > defaultSpread) {
+	// If previous cycle had an iv failure, but now back online, update oracle failure state
+	if (optionPricePercChange > defaultSpread || prevOptionPrice === undefined) {
 		optionParams[optionIndex].spotPrice = spotPrice
 		optionParams[optionIndex].ts = ts
 		optionParams[optionIndex].iv = iv
 		optionParams[optionIndex].delta = option.delta
 		optionParams[optionIndex].theta = option.theta
 		optionParams[optionIndex].vega = option.vega
-		optionParams[optionIndex].update = true
+		optionParams[optionIndex].cycleOrders = true
+		optionParams[optionIndex].ivOracleFailure = false
 	}
 
 	return optionParams

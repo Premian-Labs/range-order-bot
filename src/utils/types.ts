@@ -47,10 +47,11 @@ export interface OptionParams {
 	strike: number
 	spotPrice: number
 	ts: number
-	iv: number
-	optionPrice: number
-	delta: number
-	theta: number
-	vega: number
-	update: boolean
+	iv: number | undefined
+	optionPrice: number | undefined
+	delta: number | undefined
+	theta: number | undefined
+	vega: number | undefined
+	cycleOrders: boolean
+	ivOracleFailure: boolean
 }
