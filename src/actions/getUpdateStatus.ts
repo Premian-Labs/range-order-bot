@@ -15,11 +15,15 @@ export async function getUpdateOptionParams(
 	curPrice: number,
 	ts: number,
 ) {
+	// determine if this is initialization case or not (for down stream processing)
+	const initialized = optionParams.length != 0
+
 	// cycle through each maturity to create/update optionsParams
 	for (const maturityString of marketParams[market].maturities) {
 		const maturityTimestamp = createExpiration(maturityString)
 		const ttm = getTTM(maturityTimestamp)
 		optionParams = await processCallsAndPuts(
+			initialized,
 			market,
 			curPrice,
 			ts,
@@ -33,6 +37,7 @@ export async function getUpdateOptionParams(
 }
 
 async function processCallsAndPuts(
+	initialized: boolean,
 	market: string,
 	spotPrice: number,
 	ts: number,
@@ -55,7 +60,7 @@ async function processCallsAndPuts(
                 INITIALIZATION CASE: No values have been established. We need a baseline. Update is set to true which
                 will enable initial deposits.
              */
-			if (optionParams.length == 0) {
+			if (!initialized) {
 				optionParams.push({
 					market,
 					maturity: maturityString,
@@ -101,7 +106,7 @@ async function processCallsAndPuts(
 				false,
 			)
 			// INITIALIZATION CASE
-			if (optionParams.length == 0) {
+			if (!initialized) {
 				optionParams.push({
 					market,
 					maturity: maturityString,
@@ -143,23 +148,23 @@ async function getGreeksAndIV(
 	ttm: number,
 	isCall: boolean,
 ): Promise<[number, Option]> {
-	const iv = await ivOracle['getVolatility(address,uint256,uint256,uint256)'](
+	const iv = parseFloat(formatEther(await ivOracle['getVolatility(address,uint256,uint256,uint256)'](
 		productionTokenAddr[market], // NOTE: we use production addresses only
 		parseEther(spotPrice.toString()),
 		parseEther(strike.toString()),
 		parseEther(ttm.toLocaleString(undefined, { maximumFractionDigits: 18 })),
-	)
+	)))
 
 	const option: Option = blackScholes.option({
 		rate: riskFreeRate,
-		sigma: parseFloat(formatEther(iv)),
+		sigma: iv,
 		strike,
 		time: ttm,
 		type: isCall ? 'call' : 'put',
 		underlying: spotPrice,
 	})
 
-	return [parseFloat(formatEther(iv)), option]
+	return [iv, option]
 }
 
 function checkForUpdate(
