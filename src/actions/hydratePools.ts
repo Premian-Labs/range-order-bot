@@ -31,7 +31,6 @@ export async function deployLiquidity(
 	spotPrice: number,
 	optionParams: OptionParams[],
 ) {
-	//TODO: integrate option params
 	log.app(`Deploying liquidity for ${market}`)
 
 	try {

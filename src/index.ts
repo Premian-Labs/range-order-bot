@@ -38,10 +38,10 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 		marketParams[market].putStrikes === undefined
 
 	if (!neitherStrikesProvided || !bothStrikesProvided) {
-		log.error(
+		log.warning(
 			`Can only run ${market} with BOTH call/put strike arrays or NEITHER `,
 		)
-		throw Error
+		return lpRangeOrders
 	}
 
 	// NOTE: may return undefined
@@ -73,6 +73,7 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 				ts,
 			)
 
+			//NOTE: all lpRangeOrders here are withdrawable
 			if (lpRangeOrders.length > 0) {
 				lpRangeOrders = await withdrawSettleLiquidity(
 					lpRangeOrders,
