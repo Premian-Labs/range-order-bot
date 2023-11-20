@@ -3,9 +3,9 @@ import {
 	IChainlinkAdapter__factory,
 	IVolatilityOracle__factory,
 	Premia,
-	SupportedChainId,
 } from '@premia/v3-sdk'
-import { Wallet } from 'ethers'
+import { Wallet, JsonRpcProvider } from 'ethers'
+import { MulticallWrapper } from 'ethers-multicall-provider'
 import {
 	addresses,
 	privateKey,
@@ -26,20 +26,17 @@ export const poolFactory = IPoolFactory__factory.connect(
 	premia.signer as any,
 )
 
-/// @dev: volatility oracle is only available on arbitrum mainnet
-const arbiPremia =
-	premia.chainId === SupportedChainId.ARBITRUM
-		? premia
-		: Premia.initializeSync({
-				provider: volatilityOracleRpcUrl,
-		  })
-
+// NOTE: we use mainnet only for IV oracles
+const ivProvider = new JsonRpcProvider(volatilityOracleRpcUrl)
+const ivMultiCallProvider = MulticallWrapper.wrap(ivProvider)
 export const ivOracle = IVolatilityOracle__factory.connect(
 	volatilityOracle,
-	arbiPremia.multicallProvider as any,
+	ivMultiCallProvider,
 )
 
+const spotProvider = new JsonRpcProvider(rpcUrl)
+const spotMultiCallProvider = MulticallWrapper.wrap(spotProvider)
 export const chainlink = IChainlinkAdapter__factory.connect(
 	addresses.core.ChainlinkAdapterProxy.address,
-	premia.multicallProvider as any,
+	spotMultiCallProvider,
 )

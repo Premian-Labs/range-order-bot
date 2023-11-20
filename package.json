@@ -25,6 +25,7 @@
 		"@uqee/black-scholes": "^1.0.7",
 		"dotenv": "^16.3.1",
 		"ethers": "^6.8.1",
+		"ethers-multicall-provider": "^5.0.0",
 		"lodash.isequal": "^4.5.0",
 		"moment": "^2.29.4",
 		"prettier": "^3.0.3",

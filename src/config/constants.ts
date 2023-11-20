@@ -16,6 +16,7 @@ export const rpcUrl =
 	ENV === 'production'
 		? `https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}`
 		: `https://arbitrum-goerli.infura.io/v3/${API_KEY_INFURA}`
+
 export const privateKey = LP_PKEY
 export const lpAddress = LP_ADDRESS
 
