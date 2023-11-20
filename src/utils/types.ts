@@ -41,10 +41,10 @@ export interface Position {
 }
 
 export interface OptionParams {
-	market: string
-	maturity: string
-	type: 'C' | 'P'
-	strike: number
+	market: string //static
+	maturity: string //static
+	type: 'C' | 'P' //static
+	strike: number //static
 	spotPrice: number | undefined
 	ts: number
 	iv: number | undefined
@@ -55,5 +55,5 @@ export interface OptionParams {
 	cycleOrders: boolean
 	ivOracleFailure: boolean
 	spotOracleFailure: boolean
-	withdrawable: boolean
+	withdrawable: boolean //static
 }

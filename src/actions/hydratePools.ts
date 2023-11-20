@@ -113,7 +113,6 @@ export async function processStrikes(
 		isCall,
 	)
 
-
 	// FIXME: replace with iterating through filtered optionParams
 	// TODO: after making ALL deposits, set optionParam-> cycleOrders to false
 	for (const { strike, option } of strikes) {

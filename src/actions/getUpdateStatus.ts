@@ -24,9 +24,15 @@ CHEATSHEET:
 cycleOrders = true/False && withdrawable = false ======> don't touch
 cycleOrders = true && withdrawable = true =========> cycle market (withdraw & deposit)
 cycleOrders = false && withdrawable = true ===========> tradable but not ready to cycle market
-ivOracleFailure = true OR spotOracleFailure = true ===============> withdraw only
+(ivOracleFailure = true OR spotOracleFailure = true) AND withdrawable ===============> withdraw only
+
+STATE CHANGES:
+cycleOrders -> updated BEFORE withdraws (in getUpdateOptionParams) and AFTER a deposit
+withdrawable -> initialization only
+oracleFailure -> updated BEFORE withdrawals/deposits (in getUpdateOptionParams)
  */
 
+// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
 export async function getUpdateOptionParams(
 	optionParams: OptionParams[],
 	lpRangeOrders: Position[],
@@ -64,7 +70,7 @@ export async function getUpdateOptionParams(
 		}
 	}
 
-	// cycle through each maturity to create/update optionsParams
+	// cycle through each maturity to create/update optionsParams from marketParam settings
 	for (const maturityString of marketParams[market].maturities) {
 		const maturityTimestamp = createExpiration(maturityString)
 		const ttm = getTTM(maturityTimestamp)
@@ -121,10 +127,10 @@ async function processCallsAndPuts(
 					delta: option?.delta,
 					theta: option?.theta,
 					vega: option?.vega,
-					cycleOrders: true,
+					cycleOrders: true, // set to establish position in first cycle
 					ivOracleFailure: iv === undefined,
 					spotOracleFailure: spotPrice === undefined,
-					withdrawable: true,
+					withdrawable: true, // set to make tradable
 				})
 			} else {
 				/*
@@ -170,10 +176,10 @@ async function processCallsAndPuts(
 					delta: option?.delta,
 					theta: option?.theta,
 					vega: option?.vega,
-					cycleOrders: true,
+					cycleOrders: true, // set to establish position in first cycle
 					ivOracleFailure: iv === undefined,
 					spotOracleFailure: spotPrice === undefined,
-					withdrawable: true,
+					withdrawable: true, // set to make tradable
 				})
 			} else {
 				// MAINTENANCE CASE
@@ -258,8 +264,7 @@ function checkForUpdate(
 	ts: number,
 	isCall: boolean,
 ) {
-	// NOTE: Find option using market/maturity/type/strike (should only be one)
-	// NOTE: We ignore existing positions that are non-withdrawable
+	// NOTE: Find option using market/maturity/type/strike/withdrawable (should only be one)
 	const optionIndex = optionParams.findIndex(
 		(option) =>
 			option.market === market &&
@@ -272,14 +277,18 @@ function checkForUpdate(
 	/*
 	NOTE: CURRENT oracle failure cases
 	IMPORTANT: if iv is undefined, so should option(price & greeks).  For this reason, we can safely assume
-	option is not undefined in the rest of the logic (!).
+	'option' is not undefined in the rest of the logic (!).
 	 */
 	if (iv === undefined || spotPrice === undefined) {
+		log.warning(
+			`${iv === undefined ? 'iv' : 'spot'} oracle failure for ${market}`,
+		)
 		optionParams[optionIndex].ivOracleFailure = iv === undefined
 		optionParams[optionIndex].spotOracleFailure = spotPrice === undefined
 		return optionParams
 	}
 
+	// NOTE: undefined is possible if previous attempt had an oracle failure
 	const prevOptionPrice = optionParams[optionIndex].optionPrice
 	const curOptionPrice = option!.price
 
@@ -290,7 +299,7 @@ function checkForUpdate(
 
 	/*
 	NOTE: if option requires withdraw/reDeposit then update all option related values
-	IMPORTANT: this is initiate a withdrawal/deposit cycle if  EITHER and existing position
+	IMPORTANT: this is to initiate a withdrawal/deposit cycle if EITHER and existing position
 	moved or, we previously withdrew due to an oracle failure and now its back online.
 	 */
 	if (optionPricePercChange > defaultSpread || prevOptionPrice === undefined) {

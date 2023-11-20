@@ -16,17 +16,21 @@ export async function withdrawSettleLiquidity(
 	market: string,
 	optionParams: OptionParams[],
 ) {
-	log.app(`Withdrawing liquidity from ${market}`)
+	log.app(`Attempting to withdraw liquidity from ${market}`)
+
+	const withdrawableOptions = optionParams.filter((option) => {
+		return option.withdrawable && option.market === market
+	})
+
+	// end early if there is no withdraws to process
+	if (withdrawableOptions.length === 0) {
+		log.info(`No withdrawable positions for ${market} exist`)
+		return lpRangeOrders
+	}
 
 	const filteredRangeOrders = lpRangeOrders.filter((rangeOrder: Position) => {
 		return rangeOrder.market === market
 	})
-
-	// if there is no withdraw to process
-	if (filteredRangeOrders.length === 0) {
-		log.info(`No existing positions for ${market}`)
-		return lpRangeOrders
-	}
 
 	/*
 		@dev: no point to process parallel txs since we need to wait for each tx to confirm.
@@ -34,9 +38,16 @@ export async function withdrawSettleLiquidity(
 		are independent of each other
 	 */
 	for (const filteredRangeOrder of filteredRangeOrders) {
-		// TODO: if range orders are withdrawable AND cycleOrders is true (optionsParams), process withdraw
-		// OR process on oracle failure on withdrawable positions (regardless of cycleOrders)
-		// TODO: if ivOracleFailure OR spotOracleFailure has occurred, process withdraw
+		const withdrawable = await checkWithdrawStatus(
+			filteredRangeOrder,
+			optionParams,
+		)
+
+		// skip lpRangeOrder
+		if (!withdrawable) {
+			continue
+		}
+
 		log.info(
 			`Processing withdraw for size: ${filteredRangeOrder.depositSize} in ${
 				filteredRangeOrder.market
@@ -125,6 +136,37 @@ export async function withdrawSettleLiquidity(
 	}
 
 	return lpRangeOrders
+}
+
+async function checkWithdrawStatus(
+	lpRangeOrder: Position,
+	optionParams: OptionParams[],
+) {
+	// NOTE: Find option using market/maturity/type/strike/WITHDRAWABLE (should only be one)
+	const optionIndex = optionParams.findIndex(
+		(option) =>
+			option.market === lpRangeOrder.market &&
+			option.maturity === lpRangeOrder.maturity &&
+			option.type === (lpRangeOrder.isCall ? 'C' : 'P') &&
+			option.strike === lpRangeOrder.strike &&
+			option.withdrawable,
+	)
+
+	// On oracle failure cases we withdraw all withdrawable positions
+	if (
+		optionParams[optionIndex].ivOracleFailure ||
+		optionParams[optionIndex].spotOracleFailure
+	) {
+		log.warning(
+			`Withdrawing ${lpRangeOrder.market}-${lpRangeOrder.maturity}-${
+				lpRangeOrder.strike
+			}-${lpRangeOrder.isCall ? 'C' : 'P'} due to oracle failure`,
+		)
+		return true
+	}
+
+	// So long as cycleOrders is true at this point, we can process withdraw
+	return optionParams[optionIndex].cycleOrders
 }
 
 async function withdrawPosition(

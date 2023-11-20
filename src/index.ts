@@ -69,7 +69,7 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 				optionParams,
 				lpRangeOrders,
 				market,
-				curPrice,
+				curPrice, // NOTE: we handle undefined case in function
 				ts,
 			)
 
@@ -90,6 +90,7 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 	marketParams[market].ts = ts
 
 	// NOTE: only run ONCE (initialization) to hydrate strikes in marketParams (if not provided)
+	// IMPORTANT: it can only run if we have a valid spot price
 	await hydrateStrikes(market, curPrice)
 
 	// NOTE: only run ONCE (initialization) to hydrate range orders per market
@@ -115,7 +116,6 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 			optionParams,
 		)
 	}
-
 
 	lpRangeOrders = await deployLiquidity(
 		lpRangeOrders,

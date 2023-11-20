@@ -10,6 +10,7 @@ import { log } from '../utils/logs'
 import { calculatePoolAddress } from '../utils/pools'
 
 // NOTE: this will find ALL range orders by user (not just from the bot)
+// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
 export async function getExistingPositions(market: string) {
 	let lpRangeOrders: Position[] = []
 
@@ -72,7 +73,7 @@ async function processOptionType(
 	maturityTimestamp: number,
 	lpRangeOrders: Position[],
 ) {
-	//NOTE: we know there are value as we hydrate it in hydrateStrikes()
+	//NOTE: we know there are strikes as we hydrated it in hydrateStrikes()
 	const strikes = isCall
 		? marketParams[market].callStrikes!
 		: marketParams[market].putStrikes!

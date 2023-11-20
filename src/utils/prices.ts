@@ -5,6 +5,7 @@ import { addresses } from '../config/constants'
 import { delay } from './time'
 import { log } from './logs'
 
+// TODO: potentially use coingecko API price as backup to chainlink oracle
 export async function getSpotPrice(market: string, retry: boolean = true) {
 	try {
 		return parseFloat(
@@ -27,6 +28,6 @@ export async function getSpotPrice(market: string, retry: boolean = true) {
 			)
 		}
 	}
-	// TODO: potentially use coingecko API price if chainlink oracle fails
+
 	return undefined
 }
