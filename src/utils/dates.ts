@@ -69,7 +69,6 @@ export function getLast30Days(): moment.Moment[] {
 	return days
 }
 
-
 export function nextYearOfMaturities() {
 	const FRIDAY = 5
 	const maturities = []
@@ -120,5 +119,3 @@ export function nextYearOfMaturities() {
 
 	return maturities
 }
-
-
