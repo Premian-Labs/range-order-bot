@@ -1,9 +1,5 @@
 import moment from 'moment'
 import { SECONDS_IN_YEAR } from '../config/constants'
-import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
-
-dayjs.extend(utc)
 
 export function getTTM(maturityTimestamp: number): number {
 	const ts = moment.utc().unix()
@@ -72,3 +68,56 @@ export function getLast30Days(): moment.Moment[] {
 
 	return days
 }
+
+
+export function nextYearOfMaturities() {
+
+	const FRIDAY = 5
+
+	const maturities = []
+
+	const today = moment.utc().startOf('day')
+	const nextYear = today.clone().add(1, 'year')
+
+	const tomorrow = today.clone().add(1, 'day').add(8, 'hours')
+
+	const afterTomorrow = today.clone().add(2, 'day').add(8, 'hours')
+
+	const nextFriday = today.clone().day(FRIDAY).add(8, 'hours')
+
+	maturities.push(tomorrow, afterTomorrow)
+
+	if (!nextFriday.isSame(tomorrow) && !nextFriday.isSame(afterTomorrow))
+		maturities.push(nextFriday)
+
+	const next2ndFriday = nextFriday.clone().add(1, 'week')
+	const next3rdFriday = nextFriday.clone().add(2, 'week')
+	const next4thFriday = nextFriday.clone().add(3, 'week')
+
+	maturities.push(next2ndFriday)
+
+	if (next3rdFriday.diff(today, 'days') < 30) maturities.push(next3rdFriday)
+	if (next4thFriday.diff(today, 'days') < 30) maturities.push(next4thFriday)
+
+	let fridayPointer = nextFriday.clone()
+	let increment = 1
+	while (nextYear.isAfter(fridayPointer)) {
+		const lastDay = today
+			.clone()
+			.add(increment, 'month')
+			.endOf('month')
+			.startOf('day')
+
+		const lastFriday = lastDay
+			.subtract((lastDay.day() + 2) % 7, 'days')
+			.add(8, 'hours')
+
+		fridayPointer = lastFriday
+		increment++
+		maturities.push(lastFriday)
+	}
+
+	return maturities
+}
+
+
