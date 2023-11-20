@@ -233,9 +233,9 @@ async function getGreeksAndIV(
 		if (retry) {
 			return getGreeksAndIV(market, spotPrice, strike, ttm, isCall, false)
 		} else {
-			log.warning(`Failed to get IV for ${market}-${strike}-${isCall}...`)
+			log.warning(`Failed to get IV for ${market}-${strike}-${isCall?'C':'P'}...`)
 			log.warning(
-				`Withdrawing range orders for ${market}-${strike}-${isCall} pool if they exist..`,
+				`Withdrawing range orders for ${market}-${strike}-${isCall?'C':'P'} pool if they exist..`,
 			)
 			return [undefined, undefined]
 		}

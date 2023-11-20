@@ -71,9 +71,7 @@ export function getLast30Days(): moment.Moment[] {
 
 
 export function nextYearOfMaturities() {
-
 	const FRIDAY = 5
-
 	const maturities = []
 
 	const today = moment.utc().startOf('day')
@@ -99,22 +97,25 @@ export function nextYearOfMaturities() {
 	if (next3rdFriday.diff(today, 'days') < 30) maturities.push(next3rdFriday)
 	if (next4thFriday.diff(today, 'days') < 30) maturities.push(next4thFriday)
 
-	let fridayPointer = nextFriday.clone()
 	let increment = 1
-	while (nextYear.isAfter(fridayPointer)) {
+	let monthlyPointer = today.clone().startOf('month').add(increment, 'month')
+
+	while (monthlyPointer.isBefore(nextYear, 'month')) {
 		const lastDay = today
 			.clone()
+			.startOf('month')
 			.add(increment, 'month')
 			.endOf('month')
 			.startOf('day')
 
-		const lastFriday = lastDay
+		const lastFriday8AM = lastDay
 			.subtract((lastDay.day() + 2) % 7, 'days')
 			.add(8, 'hours')
 
-		fridayPointer = lastFriday
+		monthlyPointer = today.clone().startOf('month').add(increment, 'month')
+
 		increment++
-		maturities.push(lastFriday)
+		maturities.push(lastFriday8AM)
 	}
 
 	return maturities
