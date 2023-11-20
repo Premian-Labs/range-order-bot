@@ -30,14 +30,15 @@ let optionParams: OptionParams[] = []
 async function initializePositions(lpRangeOrders: Position[], market: string) {
 	log.app(`Initializing positions for ${market}`)
 
-	const bothStrikesProvided =
+	const callStrikesOnly =
 		marketParams[market].callStrikes !== undefined &&
-		marketParams[market].putStrikes !== undefined
-	const neitherStrikesProvided =
-		marketParams[market].callStrikes === undefined &&
 		marketParams[market].putStrikes === undefined
 
-	if (!neitherStrikesProvided || !bothStrikesProvided) {
+	const putStrikesOnly =
+		marketParams[market].callStrikes === undefined &&
+		marketParams[market].putStrikes !== undefined
+
+	if (callStrikesOnly || putStrikesOnly) {
 		log.warning(
 			`Can only run ${market} with BOTH call/put strike arrays or NEITHER `,
 		)
