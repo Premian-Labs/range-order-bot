@@ -43,7 +43,7 @@ export async function withdrawSettleLiquidity(
 			optionParams,
 		)
 
-		// skip lpRangeOrder
+		// skip lpRangeOrder if not withdrawable
 		if (!withdrawable) {
 			continue
 		}
@@ -151,6 +151,13 @@ async function checkWithdrawStatus(
 			option.strike === lpRangeOrder.strike &&
 			option.withdrawable,
 	)
+
+	// IMPORTANT: -1 is returned if lpRangeOrder is not in optionParams.  If this is the case there is a bug
+	if (optionIndex == -1) {
+		throw new Error(
+			'lpRangeOrder was not traceable in optionParams. Please contact dev team',
+		)
+	}
 
 	// On oracle failure cases we withdraw all withdrawable positions
 	if (

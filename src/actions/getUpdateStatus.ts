@@ -16,8 +16,8 @@ import { delay } from '../utils/time'
 const blackScholes: BlackScholes = new BlackScholes()
 
 /*
-IMPORTANT: lpRangeOrders will hold all EXISTING and NEW positions. OptionParams should always have
-a record of new and existing positions.  Note that its possible for optionParams to have MORE options than
+IMPORTANT: lpRangeOrders will hold all EXISTING and NEW positions. OptionParams should ALWAYS have
+a record of new and existing positions, however, it's possible for optionParams to have MORE options than
 actual positions in lpRangeOrders due to filters such at DTE and Delta.
 
 CHEATSHEET:

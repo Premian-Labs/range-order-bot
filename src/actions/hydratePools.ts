@@ -7,8 +7,10 @@ import {
 	autoDeploy,
 	defaultSpread,
 	maxCollateralApproved,
+	maxDelta,
 	maxDeploymentFee,
 	minAnnihilationSize,
+	minDelta,
 	minDTE,
 	rangeWidthMultiplier,
 } from '../config'
@@ -16,7 +18,6 @@ import { IPool, OrderType, PoolKey, TokenType } from '@premia/v3-sdk'
 import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
 import { setApproval } from '../utils/tokens'
 import { premia, signerAddress, poolFactory } from '../config/contracts'
-import { getStrikesAndOptions } from '../utils/strikes'
 import {
 	getCollateralApprovalAmount,
 	getValidRangeWidth,
@@ -46,6 +47,7 @@ export async function deployLiquidity(
 				maturityString,
 				true,
 				lpRangeOrders,
+				optionParams,
 			)
 
 			// puts
@@ -56,6 +58,7 @@ export async function deployLiquidity(
 				maturityString,
 				false,
 				lpRangeOrders,
+				optionParams,
 			)
 		}
 	} catch (err) {
@@ -77,6 +80,7 @@ export async function processStrikes(
 	maturityString: string,
 	isCall: boolean,
 	lpRangeOrders: Position[],
+	optionParams: OptionParams[],
 ) {
 	// format exp 15SEP23 => 1234567891
 	const maturityTimestamp = createExpiration(maturityString)
@@ -93,37 +97,61 @@ export async function processStrikes(
 	// check if option expiration is more than 1 year out
 	if (daysToExpiration > 365) {
 		log.warning(
-			`Skipping expiration date: ${maturityString} is more than in 1 year`,
+			`Skipping expiration date: ${maturityString} is more than 1 year out`,
 		)
 		return lpRangeOrders
 	}
 
-	// FIXME: replace with optionParams object which has what we need
-	// TODO: we want a filtered list of optionParams to iterate through
-	// TODO: 1st filter: filter by market, maturity, type (core)
-	// TODO: 2nd filter: check cycleOrders & withdrawable is true, ivOracleFailure & spotOracleFailure is false
-	// NOTE: if withdrawable is true, it also means we can deposit (assuming cycleOrders is true)
-	// TODO: add min/max delta filter  & minDTE filter with appropriate logging
-	const strikes = await getStrikesAndOptions(
-		market,
-		spotPrice,
-		marketParams,
-		maturityString,
-		maturityTimestamp,
-		isCall,
-	)
+	// Find options by market, type, maturity and withdrawable (capable of deposits)
+	const filteredOptionParams = optionParams.filter((option) => {
+		return (
+			option.market === market &&
+			isCall &&
+			option.maturity === maturityString &&
+			option.withdrawable
+		)
+	})
 
-	// FIXME: replace with iterating through filtered optionParams
-	// TODO: after making ALL deposits, set optionParam-> cycleOrders to false
-	for (const { strike, option } of strikes) {
-		log.info(`Depositing for ${maturityString}-${strike}-${isCall ? 'C' : 'P'}`)
+	for (const op of filteredOptionParams) {
+		// critical error in market, skip ALL deposits
+		if (op.ivOracleFailure || op.spotOracleFailure) {
+			log.warning(
+				`Due to oracle failure we can not process ${
+					isCall ? 'Call' : 'Put'
+				} deposits in ${op.market}`,
+			)
+			break
+		}
+
+		// Skip the deposit if range order is not due for a cycle update (we never withdrew)
+		if (!op.cycleOrders) {
+			log.debug(
+				`${op.market}-${op.maturity}-${op.strike}-${op.type} did not breach update threshold...checking next market`,
+			)
+			continue
+		}
+
+		// NOTE: we know delta exists because we checked for iv oracle failure
+		const maxDeltaThreshold = Math.abs(op.delta!) > maxDelta
+		const minDeltaThreshold = Math.abs(op.delta!) < minDelta
+
+		if (maxDeltaThreshold || minDeltaThreshold) {
+			log.warning(
+				`Skipping ${op.market}-${op.maturity}-${op.strike}-${op.type}'}`,
+			)
+
+			log.warning(`Option out of delta range. Delta: ${op.delta}`)
+			continue
+		}
+
+		log.info(`Depositing for ${op.maturity}-${op.strike}-${op.type}`)
 
 		const fetchedPoolInfo = await fetchOrDeployPool(
 			lpRangeOrders,
-			market,
-			maturityString,
+			op.market,
+			op.maturity,
 			maturityTimestamp,
-			strike,
+			op.strike,
 			isCall,
 		)
 
@@ -146,16 +174,17 @@ export async function processStrikes(
 		// check to see if we have positions that can be annihilated
 		await processAnnihilate(
 			executablePool,
-			market,
-			maturityString,
-			strike,
+			op.market,
+			op.maturity,
+			op.strike,
 			isCall,
 			longBalance,
 			shortBalance,
 		)
 
 		// Option price normalized
-		const optionPrice = option.price / spotPrice
+		// NOTE: we checked for oracle failure so optionPrice should exist
+		const optionPrice = op.optionPrice! / spotPrice
 
 		log.debug(`${isCall ? 'Call' : 'Put'} Market Price: ${marketPrice}`)
 		log.debug(`${isCall ? 'Call' : 'Put'} Fair Value: ${optionPrice}`)
@@ -167,8 +196,8 @@ export async function processStrikes(
 
 		const { rightPosKey, rightSideCollateralAmount } =
 			await prepareRightSideOrder(
-				market,
-				strike,
+				op.market,
+				op.strike,
 				isCall,
 				marketPrice,
 				optionPrice,
@@ -183,9 +212,9 @@ export async function processStrikes(
 
 		const { leftPosKey, leftSideCollateralAmount } = await prepareLeftSideOrder(
 			marketParams,
-			market,
-			maturityString,
-			strike,
+			op.market,
+			op.maturity,
+			op.strike,
 			isCall,
 			marketPrice,
 			optionPrice,
@@ -201,9 +230,9 @@ export async function processStrikes(
 			lpRangeOrders,
 			executablePool,
 			poolAddress,
-			market,
-			maturityString,
-			strike,
+			op.market,
+			op.maturity,
+			op.strike,
 			isCall,
 			longBalance,
 			shortBalance,
@@ -212,6 +241,19 @@ export async function processStrikes(
 			leftPosKey,
 			leftSideCollateralAmount,
 		)
+
+		// NOTE: Find option using market/maturity/type/strike/withdrawable (should only be one)
+		const optionIndex = optionParams.findIndex(
+			(option) =>
+				option.market === op.market &&
+				option.maturity === op.maturity &&
+				option.type === (isCall ? 'C' : 'P') &&
+				option.strike === op.strike &&
+				option.withdrawable,
+		)
+
+		// IMPORTANT: after processing a deposit, turn update to false
+		optionParams[optionIndex].cycleOrders = false
 	}
 
 	return lpRangeOrders
