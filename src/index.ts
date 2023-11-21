@@ -67,15 +67,17 @@ async function initializePositions(
 			log.warning('Attempting to withdraw existing positions...')
 
 			// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
-			lpRangeOrders = await getExistingPositions(market)
+			lpRangeOrders.concat(await getExistingPositions(market))
 
 			// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
-			optionParams = await getUpdateOptionParams(
-				optionParams,
-				lpRangeOrders,
-				market,
-				curPrice, // NOTE: we handle undefined case in function
-				ts,
+			optionParams.concat(
+				await getUpdateOptionParams(
+					optionParams,
+					lpRangeOrders,
+					market,
+					curPrice, // NOTE: we handle undefined case in function
+					ts,
+				),
 			)
 
 			//NOTE: all lpRangeOrders here are withdrawable
@@ -100,16 +102,18 @@ async function initializePositions(
 
 	// NOTE: only run ONCE (initialization) to hydrate range orders per market
 	// IMPORTANT: can ONLY be run if strikes exist in marketParams!
-	lpRangeOrders = await getExistingPositions(market)
+	lpRangeOrders.concat(await getExistingPositions(market))
 
 	// Initial hydration of option specs for each pool (K,T)
 	// IMPORTANT: can ONLY be run if strikes exist in marketParams!
-	optionParams = await getUpdateOptionParams(
-		optionParams,
-		lpRangeOrders,
-		market,
-		curPrice,
-		ts,
+	optionParams.concat(
+		await getUpdateOptionParams(
+			optionParams,
+			lpRangeOrders,
+			market,
+			curPrice,
+			ts,
+		),
 	)
 
 	// Optional user config (withdrawExistingPositions) to start fresh
@@ -128,6 +132,7 @@ async function initializePositions(
 		curPrice,
 		optionParams,
 	)
+
 	lpRangeOrders = processedDeposits.lpRangeOrders
 	optionParams = processedDeposits.optionParams
 
@@ -307,7 +312,7 @@ async function main() {
 
 		log.app(
 			'Cycle Completed, now idling until next refresh... View your active positions at' +
-			' https://app.premia.finance/pools',
+				' https://app.premia.finance/pools',
 		)
 
 		await delay(refreshRate * 60 * 1000) // refresh rate from min -> milli sec

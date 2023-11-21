@@ -173,15 +173,15 @@ async function processStrike(
 
 	if (tokenIds.length > 0) {
 		log.info(
-			`Existing positions for ${maturityString}-${strike}-${
-				isCall ? 'C' : 'P'
-			}: ${tokenIds.length}`,
+			`Existing positions for ${market}-${maturityString}-${Number(
+				formatEther(strike),
+			)}-${isCall ? 'C' : 'P'}: Total Range Orders: ${tokenIds.length}`,
 		)
 
 		log.debug(
-			`Existing positions token ids (${maturityString}-${strike}-${
-				isCall ? 'C' : 'P'
-			}): `,
+			`Existing positions token ids (${market}-${maturityString}-${Number(
+				formatEther(strike),
+			)}-${isCall ? 'C' : 'P'}): TokenIds: `,
 			tokenIds,
 		)
 	}

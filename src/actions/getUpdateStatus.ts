@@ -69,11 +69,11 @@ export async function getUpdateOptionParams(
 				strike: existingPosition.strike,
 				spotPrice: curPrice,
 				ts,
-				iv: notExp? iv: undefined,
-				optionPrice: notExp? option?.price: undefined,
-				delta: notExp? option?.delta: undefined,
-				theta: notExp? option?.theta: undefined,
-				vega: notExp? option?.vega: undefined,
+				iv: notExp ? iv : undefined,
+				optionPrice: notExp ? option?.price : undefined,
+				delta: notExp ? option?.delta : undefined,
+				theta: notExp ? option?.theta : undefined,
+				vega: notExp ? option?.vega : undefined,
 				cycleOrders: true, // set to establish position in first cycle
 				ivOracleFailure: iv === undefined,
 				spotOracleFailure: curPrice === undefined,
@@ -86,7 +86,6 @@ export async function getUpdateOptionParams(
 	for (const maturityString of marketParams[market].maturities) {
 		const maturityTimestamp = createExpiration(maturityString)
 		const ttm = getTTM(maturityTimestamp)
-
 
 		optionParams = await processCallsAndPuts(
 			initialized,
@@ -139,11 +138,11 @@ async function processCallsAndPuts(
 					strike,
 					spotPrice,
 					ts,
-					iv: notExp? iv: undefined,
-					optionPrice: notExp? option?.price: undefined,
-					delta: notExp? option?.delta: undefined,
-					theta: notExp? option?.theta: undefined,
-					vega: notExp? option?.vega: undefined,
+					iv: notExp ? iv : undefined,
+					optionPrice: notExp ? option?.price : undefined,
+					delta: notExp ? option?.delta : undefined,
+					theta: notExp ? option?.theta : undefined,
+					vega: notExp ? option?.vega : undefined,
 					cycleOrders: true, // set to establish position in first cycle
 					ivOracleFailure: iv === undefined,
 					spotOracleFailure: spotPrice === undefined,
@@ -191,11 +190,11 @@ async function processCallsAndPuts(
 					strike,
 					spotPrice,
 					ts,
-					iv: notExp? iv: undefined,
-					optionPrice: notExp? option?.price: undefined,
-					delta: notExp? option?.delta: undefined,
-					theta: notExp? option?.theta: undefined,
-					vega: notExp? option?.vega: undefined,
+					iv: notExp ? iv : undefined,
+					optionPrice: notExp ? option?.price : undefined,
+					delta: notExp ? option?.delta : undefined,
+					theta: notExp ? option?.theta : undefined,
+					vega: notExp ? option?.vega : undefined,
 					cycleOrders: true, // set to establish position in first cycle
 					ivOracleFailure: iv === undefined,
 					spotOracleFailure: spotPrice === undefined,
@@ -315,7 +314,7 @@ function checkForUpdate(
 
 	// NOTE: if the option had expired, we don't need to update its params
 	// IMPORTANT: we switch withdrawable to true, regardless of user setting (its expired)
-	if (ttm < 0){
+	if (ttm < 0) {
 		optionParams[optionIndex].spotPrice = spotPrice
 		optionParams[optionIndex].ts = ts
 		optionParams[optionIndex].iv = undefined

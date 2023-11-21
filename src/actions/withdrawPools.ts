@@ -229,7 +229,9 @@ async function withdrawPosition(
 			)
 		}
 
-		log.info(`LP Range Order withdraw confirmed of size: ${poolBalance}`)
+		log.info(
+			`LP Range Order withdraw confirmed of size: ${formatEther(poolBalance)}`,
+		)
 	} catch (err) {
 		await delay(2000)
 
