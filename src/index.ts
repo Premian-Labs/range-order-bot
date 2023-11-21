@@ -131,9 +131,6 @@ async function initializePositions(
 	lpRangeOrders = processedDeposits.lpRangeOrders
 	optionParams = processedDeposits.optionParams
 
-	// initialization path complete
-	initialized = true
-
 	return { lpRangeOrders, optionParams }
 }
 
@@ -299,6 +296,9 @@ async function runRangeOrderBot() {
 		lpRangeOrders = updatedMarkets.lpRangeOrders
 		optionParams = updatedMarkets.optionParams
 	}
+
+	// NOTE: after first run, initialized will remain true
+	initialized = true
 }
 
 async function main() {
