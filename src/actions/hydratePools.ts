@@ -58,7 +58,6 @@ export async function deployLiquidity(market: string, spotPrice: number) {
 	log.info(
 		`Current LP Positions: ${JSON.stringify(state.lpRangeOrders, null, 4)}`,
 	)
-	return
 }
 
 export async function processStrikes(
@@ -92,8 +91,7 @@ export async function processStrikes(
 		return (
 			option.market === market &&
 			option.type === (isCall ? 'C' : 'P') &&
-			option.maturity === maturityString &&
-			option.withdrawable
+			option.maturity === maturityString
 		)
 	})
 
@@ -234,8 +232,7 @@ export async function processStrikes(
 				option.market === op.market &&
 				option.maturity === op.maturity &&
 				option.type === (isCall ? 'C' : 'P') &&
-				option.strike === op.strike &&
-				option.withdrawable,
+				option.strike === op.strike,
 		)
 
 		// IMPORTANT: -1 is returned if lpRangeOrder is not in state.optionParams.  If this is the case there is a bug

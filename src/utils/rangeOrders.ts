@@ -20,11 +20,12 @@ export async function getCollateralApprovalAmount(
 		const lowerTick = parseFloat(formatEther(posKey.lower))
 		const upperTick = parseFloat(formatEther(posKey.upper))
 		const averagePrice = (lowerTick + upperTick) / 2
+
+		const baseDecimal = market === `WBTC` ? 8 : 18
 		const collateralValue = Number(
-			(isCallPool
-				? depositSize * averagePrice
-				: depositSize * strike * averagePrice
-			).toFixed(18),
+			isCallPool
+				? (depositSize * averagePrice).toFixed(baseDecimal)
+				: (depositSize * strike * averagePrice).toFixed(6),
 		)
 
 		log.info(

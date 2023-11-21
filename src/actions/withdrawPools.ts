@@ -16,7 +16,7 @@ export async function withdrawSettleLiquidity(market: string) {
 	log.app(`Attempting to withdraw liquidity from ${market}`)
 
 	const withdrawableOptions = state.optionParams.filter((option) => {
-		return option.withdrawable && option.market === market
+		return option.market === market
 	})
 
 	// end early if there is no withdraws to process

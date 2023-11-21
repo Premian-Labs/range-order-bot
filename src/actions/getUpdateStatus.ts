@@ -1,10 +1,4 @@
-import {
-	marketParams,
-	riskFreeRate,
-	defaultSpread,
-	withdrawExistingPositions,
-	state,
-} from '../config'
+import { marketParams, riskFreeRate, defaultSpread, state } from '../config'
 import { createExpiration, getTTM } from '../utils/dates'
 import { BlackScholes, Option } from '@uqee/black-scholes'
 import { ivOracle } from '../config/contracts'
@@ -12,6 +6,7 @@ import { productionTokenAddr } from '../config/constants'
 import { formatEther, parseEther } from 'ethers'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
+import uniqBy from 'lodash.uniqby'
 
 const blackScholes: BlackScholes = new BlackScholes()
 
@@ -21,9 +16,8 @@ a record of new and existing positions, however, it's possible for state.optionP
 actual positions in state.lpRangeOrders due to filters such at DTE and Delta.
 
 CHEATSHEET:
-cycleOrders = true/False && withdrawable = false ======> don't touch
-cycleOrders = true && withdrawable = true =========> cycle market (withdraw & deposit)
-cycleOrders = false && withdrawable = true ===========> tradable but not ready to cycle market
+cycleOrders = true  =========> cycle market (withdraw & deposit)
+cycleOrders = false  ===========> tradable but not ready to cycle market
 (ivOracleFailure = true OR spotOracleFailure = true) AND withdrawable ===============> withdraw only
 
 STATE CHANGES:
@@ -38,11 +32,11 @@ export async function getUpdateOptionParams(
 	curPrice: number | undefined,
 	ts: number,
 ) {
-	// determine if this is initialization case for this market or not (for down stream processing)
+	// If no optionParam for a given market exists, this is our initialization of that market
 	const filteredOptionParams = state.optionParams.filter((option) => {
 		return option.market === market
 	})
-	const initialized = filteredOptionParams.length != 0
+	const initialized = filteredOptionParams.length > 0
 
 	/*
 	INITIALIZATION CASE : We need to ensure existing positions are IGNORED if a user specifies this by setting
@@ -52,8 +46,10 @@ export async function getUpdateOptionParams(
 	log.debug(
 		`Existing Number of Range Orders for ${market}: ${state.lpRangeOrders.length}`,
 	)
+
+	// EXISTING POSITION INITIALIZATION
 	if (!initialized && state.lpRangeOrders.length > 0) {
-		for (const existingPosition of state.lpRangeOrders) {
+		for (const existingPosition of uniqBy(state.lpRangeOrders, 'poolAddress')) {
 			const maturityTimestamp = createExpiration(existingPosition.maturity)
 			const ttm = getTTM(maturityTimestamp)
 			const notExp = ttm > 0
@@ -81,7 +77,6 @@ export async function getUpdateOptionParams(
 				cycleOrders: true, // set to establish position in first cycle
 				ivOracleFailure: iv === undefined,
 				spotOracleFailure: curPrice === undefined,
-				withdrawable: withdrawExistingPositions, // This is the critical boolean
 			})
 		}
 	}
@@ -131,23 +126,32 @@ async function processCallsAndPuts(
                 set a failure boolean which can be used to determine emergency withdraws if positions exist
              */
 			if (!initialized) {
-				state.optionParams.push({
-					market,
-					maturity: maturityString,
-					type: 'C',
-					strike,
-					spotPrice,
-					ts,
-					iv: notExp ? iv : undefined,
-					optionPrice: notExp ? option?.price : undefined,
-					delta: notExp ? option?.delta : undefined,
-					theta: notExp ? option?.theta : undefined,
-					vega: notExp ? option?.vega : undefined,
-					cycleOrders: true, // set to establish position in first cycle
-					ivOracleFailure: iv === undefined,
-					spotOracleFailure: spotPrice === undefined,
-					withdrawable: true, // set to make tradable
-				})
+				const duplicated = state.optionParams.some(
+					(option) =>
+						option.market === market &&
+						option.strike === strike &&
+						option.maturity === maturityString &&
+						option.type === 'C',
+				)
+
+				if (!duplicated) {
+					state.optionParams.push({
+						market,
+						maturity: maturityString,
+						type: 'C',
+						strike,
+						spotPrice,
+						ts,
+						iv: notExp ? iv : undefined,
+						optionPrice: notExp ? option?.price : undefined,
+						delta: notExp ? option?.delta : undefined,
+						theta: notExp ? option?.theta : undefined,
+						vega: notExp ? option?.vega : undefined,
+						cycleOrders: true, // set to establish position in first cycle
+						ivOracleFailure: iv === undefined,
+						spotOracleFailure: spotPrice === undefined,
+					})
+				}
 			} else {
 				/*
 					MAINTENANCE CASE: if option price has moved beyond our built-in spread, we update all params and set update => true so that
@@ -182,23 +186,31 @@ async function processCallsAndPuts(
 			)
 			// INITIALIZATION CASE
 			if (!initialized) {
-				state.optionParams.push({
-					market,
-					maturity: maturityString,
-					type: 'P',
-					strike,
-					spotPrice,
-					ts,
-					iv: notExp ? iv : undefined,
-					optionPrice: notExp ? option?.price : undefined,
-					delta: notExp ? option?.delta : undefined,
-					theta: notExp ? option?.theta : undefined,
-					vega: notExp ? option?.vega : undefined,
-					cycleOrders: true, // set to establish position in first cycle
-					ivOracleFailure: iv === undefined,
-					spotOracleFailure: spotPrice === undefined,
-					withdrawable: true, // set to make tradable
-				})
+				const duplicated = state.optionParams.some(
+					(option) =>
+						option.market === market &&
+						option.strike === strike &&
+						option.maturity === maturityString &&
+						option.type === 'P',
+				)
+				if (!duplicated) {
+					state.optionParams.push({
+						market,
+						maturity: maturityString,
+						type: 'P',
+						strike,
+						spotPrice,
+						ts,
+						iv: notExp ? iv : undefined,
+						optionPrice: notExp ? option?.price : undefined,
+						delta: notExp ? option?.delta : undefined,
+						theta: notExp ? option?.theta : undefined,
+						vega: notExp ? option?.vega : undefined,
+						cycleOrders: true, // set to establish position in first cycle
+						ivOracleFailure: iv === undefined,
+						spotOracleFailure: spotPrice === undefined,
+					})
+				}
 			} else {
 				// MAINTENANCE CASE
 				checkForUpdate(
@@ -290,8 +302,7 @@ function checkForUpdate(
 			option.market === market &&
 			option.maturity === maturityString &&
 			option.type === (isCall ? 'C' : 'P') &&
-			option.strike === strike &&
-			option.withdrawable,
+			option.strike === strike,
 	)
 
 	/*
@@ -320,7 +331,6 @@ function checkForUpdate(
 		state.optionParams[optionIndex].cycleOrders = true
 		state.optionParams[optionIndex].ivOracleFailure = false
 		state.optionParams[optionIndex].spotOracleFailure = false
-		state.optionParams[optionIndex].withdrawable = true
 
 		return
 	}
