@@ -50,8 +50,8 @@ are priced in USDC but based on the strike price. For example, a 1500 strike
 put at 0.004 is (0.004 * 1500) in USDC terms.
  */
 
-// TODO: enough Put only or Call only trading
-// TODO: enable one-sided trading only (ie. left or right side)
+// TODO FEATURE: enable Put only or Call only trading
+// TODO FEATURE: enable one-sided trading only (ie. left or right side)
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,
@@ -77,8 +77,8 @@ export const marketParams: MarketParams = {
 If an option markets delta goes outside the min/max range it will automatically be excluded from
 new liquidity deployment (this overrides the markets set in marketParams)
  */
-export const minDelta = 0.01 // .15 recommended
-export const maxDelta = 0.99 // .6 recommended
+export const minDelta = 0.15 // .15 recommended
+export const maxDelta = 0.6 // .6 recommended
 
 /*
 If an option market falls below this threshold, it will automatically be excluded from new
@@ -93,7 +93,7 @@ ahead of time (set to max uint256) to avoid approvals on each deposit.
 
 WARNING: This script does NOT remove max approval
  */
-export const maxCollateralApproved = false
+export const maxCollateralApproved = true
 
 /*
   NOTE: this will determine the width of the range order
