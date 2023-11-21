@@ -271,7 +271,6 @@ export async function processStrikes(
 	return { lpRangeOrders, optionParams }
 }
 
-// FIXME: seems to be inconsistency with deployments...some are failing to deploy
 async function fetchOrDeployPool(
 	lpRangeOrders: Position[],
 	market: string,
