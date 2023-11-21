@@ -40,8 +40,11 @@ export async function getUpdateOptionParams(
 	curPrice: number | undefined,
 	ts: number,
 ) {
-	// determine if this is initialization case or not (for down stream processing)
-	const initialized = optionParams.length != 0
+	// determine if this is initialization case for this market or not (for down stream processing)
+	const filteredOptionParams = optionParams.filter((option) => {
+		return option.market === market
+	})
+	const initialized = filteredOptionParams.length != 0
 
 	/*
 	INITIALIZATION CASE : We need to ensure existing positions are IGNORED if a user specifies this by setting
@@ -330,8 +333,8 @@ function checkForUpdate(
 		return optionParams
 	}
 
-	// NOTE: undefined is possible if previous attempt had an oracle failure
-	const prevOptionPrice = optionParams[optionIndex].optionPrice
+	//FIXME: why is index returning -1 for some options?
+	const prevOptionPrice = optionParams[optionIndex] ? optionParams[optionIndex].optionPrice : null
 	const curOptionPrice = option!.price
 
 	// NOTE: if we had a previous oracle failure, treat case similar to initialize case

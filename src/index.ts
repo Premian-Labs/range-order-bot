@@ -42,6 +42,7 @@ async function initializePositions(
 		marketParams[market].callStrikes === undefined &&
 		marketParams[market].putStrikes !== undefined
 
+	// marketParams configuration check
 	if (callStrikesOnly || putStrikesOnly) {
 		log.warning(
 			`Can only run ${market} with BOTH call/put strike arrays or NEITHER `,
