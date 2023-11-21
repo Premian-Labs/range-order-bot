@@ -1,17 +1,19 @@
 import { IPool, PoolKey } from '@premia/v3-sdk'
-import { parseEther, formatEther } from 'ethers'
+import { formatEther, parseEther } from 'ethers'
 import { marketParams } from '../config'
-import { lpAddress, addresses } from '../config/constants'
+import { addresses, lpAddress } from '../config/constants'
 import { Position } from '../utils/types'
 import flatten from 'lodash.flatten'
 import {
 	createExpiration,
 	getLast30Days,
+	getTTM,
 	nextYearOfMaturities,
 } from '../utils/dates'
-import { premia, botMultiCallProvider, poolFactory } from '../config/contracts'
+import { botMultiCallProvider, poolFactory, premia } from '../config/contracts'
 import { parseTokenId } from '../utils/tokens'
 import { log } from '../utils/logs'
+import moment from 'moment'
 
 // NOTE: this will find ALL range orders by user (not just from the bot)
 // IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
@@ -34,12 +36,20 @@ export async function getExistingPositions(market: string) {
 
 		log.info(`Finished getting existing positions!`)
 		log.info(
-			`Current LP Positions: ${JSON.stringify(processedRangeOrders, null, 4)}`,
+			`Current LP Positions: ${JSON.stringify(
+				flatten(processedRangeOrders),
+				null,
+				4,
+			)}`,
 		)
 	} catch (err) {
 		log.error(`Error getting existing positions: ${err}`)
 		log.debug(
-			`Current LP Positions: ${JSON.stringify(processedRangeOrders, null, 4)}`,
+			`Current LP Positions: ${JSON.stringify(
+				flatten(processedRangeOrders),
+				null,
+				4,
+			)}`,
 		)
 	}
 
@@ -63,13 +73,7 @@ async function processMaturity(maturityString: string, market: string) {
 			processOptionType(isCall, maturityString, market, maturityTimestamp),
 		),
 	)
-	log.debug(
-		`Processed Maturity: ${JSON.stringify(
-			flatten(processedRangeOrders),
-			null,
-			4,
-		)}`,
-	)
+
 	return flatten(processedRangeOrders)
 }
 
@@ -97,13 +101,7 @@ async function processOptionType(
 				),
 		),
 	)
-	log.debug(
-		`Processed OptionType: ${JSON.stringify(
-			flatten(processedRangeOrders),
-			null,
-			4,
-		)}`,
-	)
+
 	return flatten(processedRangeOrders)
 }
 
@@ -114,6 +112,8 @@ async function processStrike(
 	market: string,
 	maturityTimestamp: number,
 ) {
+	//TODO: check if option expired or out of 1 year window before using getPoolAddress
+	// TODO: remove the last 30 days of expirations (that have passed)?
 	const poolKey: PoolKey = {
 		base: marketParams[market].address,
 		quote: addresses.tokens.USDC,
@@ -133,7 +133,7 @@ async function processStrike(
 		;[poolAddress, isDeployed] = await poolFactory.getPoolAddress(poolKey)
 
 		if (!isDeployed) {
-			log.warning(
+			log.debug(
 				`Pool is not deployed ${market}-${maturityString}-${formatEther(
 					strike,
 				)}-${isCall ? 'C' : 'P'}`,
@@ -141,12 +141,20 @@ async function processStrike(
 			return []
 		}
 	} catch {
-		log.warning(
-			`Can not get poolAddress ${market}-${maturityString}-${formatEther(
-				strike,
-			)}-${isCall ? 'C' : 'P'}`,
-		)
-		return []
+		// NOTE: log only if the option has a valid exp but still failed
+		const expired = maturityTimestamp < moment.utc().unix()
+		const outOfRange = 1 < getTTM(maturityTimestamp)
+		if (expired || outOfRange) {
+			//No need to attempt to get poolAddress
+			return []
+		} else {
+			log.debug(
+				`Can not get poolAddress ${market}-${maturityString}-${formatEther(
+					strike,
+				)}-${isCall ? 'C' : 'P'}`,
+			)
+			return []
+		}
 	}
 
 	const pool = premia.contracts.getPoolContract(
@@ -184,7 +192,7 @@ async function processStrike(
 		)
 	}
 
-	const processedRangeOrders: Position[] = await processTokenIds(
+	return await processTokenIds(
 		tokenIds,
 		pool,
 		maturityString,
@@ -193,15 +201,6 @@ async function processStrike(
 		market,
 		poolAddress,
 	)
-
-	log.debug(
-		`Processed Strike: ${JSON.stringify(
-			flatten(processedRangeOrders),
-			null,
-			4,
-		)}`,
-	)
-	return processedRangeOrders
 }
 
 async function processTokenIds(

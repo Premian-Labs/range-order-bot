@@ -44,11 +44,23 @@ export async function getUpdateOptionParams(
 	const initialized = optionParams.length != 0
 
 	/*
-	NOTE: We need to ensure existing positions are IGNORED if a user specifies this by setting
-	withdrawExistingPositions to false.  This should only run once.
+	INITIALIZATION CASE : We need to ensure existing positions are IGNORED if a user specifies this by setting
+	withdrawExistingPositions to false. All existing positions need to be hydrated with proper
+	spot/option data. This should only run once.
 	 */
 	if (!initialized && lpRangeOrders.length > 0) {
 		for (const existingPosition of lpRangeOrders) {
+			const maturityTimestamp = createExpiration(existingPosition.maturity)
+			const ttm = getTTM(maturityTimestamp)
+
+			const [iv, option] = await getGreeksAndIV(
+				existingPosition.market,
+				curPrice,
+				existingPosition.strike,
+				ttm,
+				existingPosition.isCall,
+			)
+
 			optionParams.push({
 				market,
 				maturity: existingPosition.maturity,

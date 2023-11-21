@@ -102,8 +102,6 @@ async function initializePositions(
 	// IMPORTANT: can ONLY be run if strikes exist in marketParams!
 	lpRangeOrders = await getExistingPositions(market)
 
-	log.debug(`Flattened lpRangeOrders${JSON.stringify(lpRangeOrders, null, 4)}`)
-
 	// Initial hydration of option specs for each pool (K,T)
 	// IMPORTANT: can ONLY be run if strikes exist in marketParams!
 	optionParams = await getUpdateOptionParams(
@@ -113,8 +111,6 @@ async function initializePositions(
 		curPrice,
 		ts,
 	)
-
-	log.debug(`Flattened optionParams${JSON.stringify(optionParams, null, 4)}`)
 
 	// Optional user config (withdrawExistingPositions) to start fresh
 	// NOTE: optionParam uses withdrawable boolean to determine eligibility of range order
