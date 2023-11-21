@@ -112,8 +112,6 @@ async function processStrike(
 	market: string,
 	maturityTimestamp: number,
 ) {
-	//TODO: check if option expired or out of 1 year window before using getPoolAddress
-	// TODO: remove the last 30 days of expirations (that have passed)?
 	const poolKey: PoolKey = {
 		base: marketParams[market].address,
 		quote: addresses.tokens.USDC,
@@ -123,10 +121,6 @@ async function processStrike(
 		isCallPool: isCall,
 	}
 
-	/*
-	NOTE: this is here for contract upgrades that could cause issues with getting
-	old pools that already exist.
-	 */
 	let poolAddress: string
 	let isDeployed: boolean
 	try {
@@ -136,7 +130,7 @@ async function processStrike(
 			log.debug(
 				`Pool is not deployed ${market}-${maturityString}-${formatEther(
 					strike,
-				)}-${isCall ? 'C' : 'P'}. Nothing position to query.`,
+				)}-${isCall ? 'C' : 'P'}. No position to query.`,
 			)
 			return []
 		}
