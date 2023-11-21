@@ -67,12 +67,7 @@ async function initializePositions(
 			log.warning('Attempting to withdraw existing positions...')
 
 			// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
-			const marketLpRangeOrders = await getExistingPositions(market)
-			lpRangeOrders = lpRangeOrders.concat(marketLpRangeOrders)
-			lpRangeOrders.concat(marketLpRangeOrders)
-			log.debug(
-				`Market Range Orders: ${JSON.stringify(lpRangeOrders, null, 4)}`,
-			)
+			lpRangeOrders = lpRangeOrders.concat(await getExistingPositions(market))
 
 			// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
 			optionParams = await getUpdateOptionParams(
@@ -84,7 +79,6 @@ async function initializePositions(
 			)
 
 			//NOTE: all lpRangeOrders here are withdrawable
-			log.debug(`Number of Range Orders: ${lpRangeOrders.length}`)
 			if (lpRangeOrders.length > 0) {
 				lpRangeOrders = await withdrawSettleLiquidity(
 					lpRangeOrders,
@@ -106,10 +100,7 @@ async function initializePositions(
 
 	// NOTE: only run ONCE (initialization) to hydrate range orders per market
 	// IMPORTANT: can ONLY be run if strikes exist in marketParams!
-	const marketLpRangeOrders = await getExistingPositions(market)
-	log.debug(`Market Range Orders: ${JSON.stringify(marketLpRangeOrders, null, 4)}`)
-	lpRangeOrders = lpRangeOrders.concat(marketLpRangeOrders)
-	log.debug(`LP Range Orders: ${JSON.stringify(lpRangeOrders, null, 4)}`)
+	lpRangeOrders = lpRangeOrders.concat(await getExistingPositions(market))
 
 	// Initial hydration of option specs for each pool (K,T)
 	// IMPORTANT: can ONLY be run if strikes exist in marketParams!
@@ -123,7 +114,6 @@ async function initializePositions(
 
 	// Optional user config (withdrawExistingPositions) to start fresh
 	// NOTE: optionParam uses withdrawable boolean to determine eligibility of range order
-	log.debug(`Number of Range Orders: ${lpRangeOrders.length}`)
 	if (lpRangeOrders.length > 0) {
 		lpRangeOrders = await withdrawSettleLiquidity(
 			lpRangeOrders,
