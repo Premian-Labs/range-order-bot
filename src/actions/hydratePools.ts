@@ -614,7 +614,7 @@ async function deployPool(
 	try {
 		const deploymentTx = await poolFactory.deployPool(poolKey, {
 			value: parseEther(maxDeploymentFee), // init fee excess refunded
-			// gasLimit: 10000000, // fails to properly estimate gas limit
+			gasLimit: 10000000, // fails to properly estimate gas limit
 		})
 
 		const confirm = await deploymentTx.wait(1)

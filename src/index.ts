@@ -63,7 +63,6 @@ async function initializePositions(market: string) {
 			// NOTE: we handle undefined spot price case in function
 			await getUpdateOptionParams(market, curPrice, ts)
 
-			//NOTE: all lpRangeOrders here are withdrawable
 			if (state.lpRangeOrders.length > 0) {
 				await withdrawSettleLiquidity(market)
 			}
@@ -86,8 +85,6 @@ async function initializePositions(market: string) {
 	// IMPORTANT: can ONLY be run if strikes exist in marketParams!
 	await getUpdateOptionParams(market, curPrice, ts)
 
-	// Optional user config (withdrawExistingPositions) to start fresh
-	// NOTE: optionParam uses withdrawable boolean to determine eligibility of range order
 	if (state.lpRangeOrders.length > 0) {
 		await withdrawSettleLiquidity(market)
 	}

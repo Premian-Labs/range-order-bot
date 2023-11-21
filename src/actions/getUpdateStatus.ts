@@ -18,11 +18,10 @@ actual positions in state.lpRangeOrders due to filters such at DTE and Delta.
 CHEATSHEET:
 cycleOrders = true  =========> cycle market (withdraw & deposit)
 cycleOrders = false  ===========> tradable but not ready to cycle market
-(ivOracleFailure = true OR spotOracleFailure = true) AND withdrawable ===============> withdraw only
+(ivOracleFailure = true OR spotOracleFailure = true) ===============> withdraw only
 
 STATE CHANGES:
 cycleOrders -> updated BEFORE withdraws (in getUpdateOptionParams) and AFTER a deposit
-withdrawable -> initialization only
 oracleFailure -> updated BEFORE withdrawals/deposits (in getUpdateOptionParams)
  */
 
@@ -121,9 +120,10 @@ async function processCallsAndPuts(
 			)
 
 			/*
-                INITIALIZATION CASE: No values have been established. We need a baseline. Update is set to true which
-                will enable initial deposits. If there is IV oracle failure, we set iv & option params to undefined and
-                set a failure boolean which can be used to determine emergency withdraws if positions exist
+                INITIALIZATION CASE: No values have been established. We need a baseline. CycleOrders is set to true
+                which will enable initial deposits. If there is IV oracle failure, we set iv & option params to
+                undefined and set a failure boolean which can be used to determine emergency withdraws if positions
+                exist
              */
 			if (!initialized) {
 				const duplicated = state.optionParams.some(
@@ -296,7 +296,7 @@ function checkForUpdate(
 	ts: number,
 	isCall: boolean,
 ) {
-	// NOTE: Find option using market/maturity/type/strike/withdrawable (should only be one)
+	// NOTE: Find option using market/maturity/type/strike (should only be one)
 	const optionIndex = state.optionParams.findIndex(
 		(option) =>
 			option.market === market &&
@@ -306,8 +306,7 @@ function checkForUpdate(
 	)
 
 	/*
-	NOTE: oracle failure cases
-	IMPORTANT: if option hasn't expired and iv is undefined, so should option(price & greeks).
+	NOTE: oracle failure cases, if option hasn't expired and iv is undefined, so should option (price & greeks).
 	 */
 	if ((iv === undefined || spotPrice === undefined) && ttm > 0) {
 		log.warning(
@@ -318,8 +317,7 @@ function checkForUpdate(
 		return
 	}
 
-	// NOTE: if the option had expired, we don't need to update its params
-	// IMPORTANT: we switch withdrawable to true, regardless of user setting (its expired)
+	// NOTE: expiration case, we don't need to update its params
 	if (ttm < 0) {
 		state.optionParams[optionIndex].spotPrice = spotPrice
 		state.optionParams[optionIndex].ts = ts
@@ -347,7 +345,7 @@ function checkForUpdate(
 
 	/*
 	NOTE: if option requires withdraw/reDeposit then update all option related values
-	IMPORTANT: this is to initiate a withdrawal/deposit cycle if EITHER and existing position
+	IMPORTANT: this is to initiate a withdrawal/deposit cycle if EITHER an existing position
 	moved or, we previously withdrew due to an oracle failure and now its back online.
 	 */
 	if (optionPricePercChange > defaultSpread || prevOptionPrice === undefined) {

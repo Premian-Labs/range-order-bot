@@ -4,7 +4,7 @@
 NOTE: Trade related settings may need to be tweaked from time to time depending on risk,
 market conditions, and changes in available strikes/expirations
  */
-import { MarketParams } from '../utils/types'
+import { MarketParams, OptionParams, Position } from '../utils/types'
 import { addresses } from './constants'
 import { LogLevel } from '../utils/logs'
 
@@ -12,7 +12,7 @@ import { LogLevel } from '../utils/logs'
 Log levels can be set to one of the following levels: DEBUG | INFO | WARN | ERROR.  Each level is inclusive
 of the next levels.  For example, if you set to INFO, you will also receive INFO, WARN, & ERROR logs.
  */
-export const logLevel: LogLevel = 'DEBUG' // suggested 'DEBUG` or `INFO`
+export const logLevel: LogLevel = 'DEBUG'
 
 /*
 These are the designated markets in which to provide liquidity for. Please note that it is
@@ -50,35 +50,43 @@ are priced in USDC but based on the strike price. For example, a 1500 strike
 put at 0.004 is (0.004 * 1500) in USDC terms.
  */
 
-// TODO FEATURE: enable Put only or Call only trading
-// TODO FEATURE: enable one-sided trading only (ie. left or right side)
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,
-		maturities: ['17NOV23', '24NOV23'],
-		callStrikes: [1500, 1600, 1700, 1800, 1900],
-		putStrikes: [1200, 1300, 1400, 1500, 1600],
+		maturities: ['08DEC23', '15DEC23'],
+		callStrikes: [2000],
+		putStrikes: [1900],
 		depositSize: 1,
 		maxExposure: 2,
 		minOptionPrice: 0.003,
 	},
 	WBTC: {
 		address: addresses.tokens.WBTC,
-		maturities: ['17NOV23', '24NOV23'],
-		callStrikes: [35000, 36000],
-		putStrikes: [34000, 35000],
+		maturities: ['08DEC23', '15DEC23'],
+		callStrikes: [35000],
+		putStrikes: [35000],
 		depositSize: 0.05,
 		maxExposure: 0.1,
 		minOptionPrice: 0.003,
 	},
 }
 
+interface State {
+	lpRangeOrders: Position[]
+	optionParams: OptionParams[]
+}
+
+export const state: State = {
+	lpRangeOrders: [],
+	optionParams: [],
+}
+
 /*
 If an option markets delta goes outside the min/max range it will automatically be excluded from
 new liquidity deployment (this overrides the markets set in marketParams)
  */
-export const minDelta = 0.15 // .15 recommended
-export const maxDelta = 0.6 // .6 recommended
+export const minDelta = 0.1 // .15 recommended
+export const maxDelta = 0.9 // .6 recommended
 
 /*
 If an option market falls below this threshold, it will automatically be excluded from new
@@ -131,17 +139,6 @@ for time decay.
 NOTE: optimal range is likely 1 <-> 24 hrs
  */
 export const timeThresholdHrs = 6 // float expressed in hours
-
-/*
-If set to true, when the bot is initialized it will search for existing LP range orders
-for each market that is listed in marketParams and withdraw from those positions prior
-to establishing new range orders.
-IMPORTANT: if set to false, those range orders will be completely ignored by the bot.  This
-should only be set to false if manual range orders are present and the user does not want to
-effect them.
- */
-
-export const withdrawExistingPositions = true
 
 /*
 If any positions accrue on both the long/short token of an option, the script will annihilate
