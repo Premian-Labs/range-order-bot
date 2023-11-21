@@ -4,18 +4,15 @@ import isEqual from 'lodash.isequal'
 import { IPool, OrderType, formatTokenId } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'
 import { lpAddress } from '../config/constants'
-import { PosKey, Position, OptionParams } from '../utils/types'
-import { premia } from '../config/contracts'
+import { PosKey, Position } from '../utils/types'
+import { botMultiCallProvider, premia } from '../config/contracts'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
 import moment from 'moment/moment'
+import { state } from '../config'
 
-// NOTE: This will only withdraw positions in lpRangeOrders
-export async function withdrawSettleLiquidity(
-	lpRangeOrders: Position[],
-	market: string,
-	optionParams: OptionParams[],
-) {
+// NOTE: This will only withdraw positions in state.lpRangeOrders
+export async function withdrawSettleLiquidity(market: string) {
 	log.app(`Attempting to withdraw liquidity from ${market}`)
 
 	const withdrawableOptions = optionParams.filter((option) => {
@@ -25,12 +22,14 @@ export async function withdrawSettleLiquidity(
 	// end early if there is no withdraws to process
 	if (withdrawableOptions.length === 0) {
 		log.info(`No withdrawable positions for ${market} exist`)
-		return lpRangeOrders
+		return
 	}
 
-	const filteredRangeOrders = lpRangeOrders.filter((rangeOrder: Position) => {
-		return rangeOrder.market === market
-	})
+	const filteredRangeOrders = state.lpRangeOrders.filter(
+		(rangeOrder: Position) => {
+			return rangeOrder.market === market
+		},
+	)
 
 	/*
 		@dev: no point to process parallel txs since we need to wait for each tx to confirm.
@@ -38,10 +37,7 @@ export async function withdrawSettleLiquidity(
 		are independent of each other
 	 */
 	for (const filteredRangeOrder of filteredRangeOrders) {
-		const withdrawable = await checkWithdrawStatus(
-			filteredRangeOrder,
-			withdrawableOptions,
-		)
+		const withdrawable = await checkWithdrawStatus(filteredRangeOrder)
 
 		// skip lpRangeOrder if not withdrawable
 		if (!withdrawable) {
@@ -82,7 +78,7 @@ export async function withdrawSettleLiquidity(
 
 		const pool = premia.contracts.getPoolContract(
 			filteredRangeOrder.poolAddress,
-			premia.multicallProvider as any,
+			botMultiCallProvider,
 		)
 
 		/*
@@ -101,7 +97,8 @@ export async function withdrawSettleLiquidity(
 		if (lpTokenBalance == 0) {
 			log.warning(`Can not withdraw or settle. No position balance.`)
 			// remove range order from array no action can be taken now or later
-			lpRangeOrders = lpRangeOrders.filter(
+			// TODO: remove range order from array
+			state.lpRangeOrders = state.lpRangeOrders.filter(
 				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
 			)
 			continue
@@ -119,7 +116,8 @@ export async function withdrawSettleLiquidity(
 			await withdrawPosition(executablePool, posKey, poolBalance, exp)
 
 			// remove range order from array if withdraw/settle is successful
-			lpRangeOrders = lpRangeOrders.filter(
+			// TODO: remove range order from array
+			state.lpRangeOrders = state.lpRangeOrders.filter(
 				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
 			)
 
@@ -130,31 +128,31 @@ export async function withdrawSettleLiquidity(
 			)
 		} finally {
 			log.debug(
-				`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`,
+				`Current LP Positions: ${JSON.stringify(state.lpRangeOrders, null, 4)}`,
 			)
 		}
 	}
 
-	return lpRangeOrders
+	return state.lpRangeOrders
 }
 
-async function checkWithdrawStatus(
-	lpRangeOrder: Position,
-	optionParams: OptionParams[],
-) {
+async function checkWithdrawStatus(lpRangeOrder: Position) {
 	// NOTE: Find option using market/maturity/type/strike (should only be one)
-	const optionIndex = optionParams.findIndex(
+	const optionIndex = state.optionParams.findIndex(
 		(option) =>
 			option.market === lpRangeOrder.market &&
 			option.maturity === lpRangeOrder.maturity &&
 			option.type === (lpRangeOrder.isCall ? 'C' : 'P') &&
-			option.strike === lpRangeOrder.strike,
+			option.strike === lpRangeOrder.strike &&
+			option.withdrawable,
 	)
 
-	// IMPORTANT: -1 is returned if lpRangeOrder is not in optionParams.  If this is the case there is a bug
+	// IMPORTANT: -1 is returned if lpRangeOrder is not in state.optionParams.  If this is the case there is a bug
 	if (optionIndex == -1) {
 		log.debug(`lpRangeOrder: ${JSON.stringify(lpRangeOrder, null, 4)}`)
-		log.debug(`optionParams:: ${JSON.stringify(optionParams, null, 4)}`)
+		log.debug(
+			`state.optionParams:: ${JSON.stringify(state.optionParams, null, 4)}`,
+		)
 		throw new Error(
 			'lpRangeOrder was not traceable in optionParams. Please contact dev team',
 		)

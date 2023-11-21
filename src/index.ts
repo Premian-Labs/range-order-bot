@@ -10,9 +10,9 @@ import {
 	timeThresholdHrs,
 	withdrawExistingPositions,
 	maxCollateralApproved,
+	state,
 } from './config'
 import { addresses } from './config/constants'
-import { OptionParams, Position } from './utils/types'
 import { getExistingPositions } from './actions/getPositions'
 import { deployLiquidity } from './actions/hydratePools'
 import { premia } from './config/contracts'
@@ -24,14 +24,8 @@ import { getUpdateOptionParams } from './actions/getUpdateStatus'
 import { hydrateStrikes } from './actions/hydrateStrikes'
 
 let initialized = false
-let lpRangeOrders: Position[] = []
-let optionParams: OptionParams[] = []
 
-async function initializePositions(
-	lpRangeOrders: Position[],
-	optionParams: OptionParams[],
-	market: string,
-) {
+async function initializePositions(market: string) {
 	log.app(`Initializing positions for ${market}`)
 
 	const callStrikesOnly =
@@ -47,7 +41,7 @@ async function initializePositions(
 		log.warning(
 			`Can only run ${market} with BOTH call/put strike arrays or NEITHER `,
 		)
-		return { lpRangeOrders, optionParams }
+		return
 	}
 
 	// NOTE: may return undefined
@@ -68,28 +62,18 @@ async function initializePositions(
 			log.warning('Attempting to withdraw existing positions...')
 
 			// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
-			lpRangeOrders = lpRangeOrders.concat(await getExistingPositions(market))
+			await getExistingPositions(market)
 
 			// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
-			optionParams = await getUpdateOptionParams(
-				optionParams,
-				lpRangeOrders,
-				market,
-				curPrice, // NOTE: we handle undefined case in function
-				ts,
-			)
+			// NOTE: we handle undefined spot price case in function
+			await getUpdateOptionParams(market, curPrice, ts)
 
 			//NOTE: all lpRangeOrders here are withdrawable
-			if (lpRangeOrders.length > 0) {
-				lpRangeOrders = await withdrawSettleLiquidity(
-					lpRangeOrders,
-					market,
-					optionParams,
-				)
+			if (state.lpRangeOrders.length > 0) {
+				await withdrawSettleLiquidity(market)
 			}
 		}
-
-		return { lpRangeOrders, optionParams }
+		return
 	}
 
 	marketParams[market].spotPrice = curPrice
@@ -101,46 +85,22 @@ async function initializePositions(
 
 	// NOTE: only run ONCE (initialization) to hydrate range orders per market
 	// IMPORTANT: can ONLY be run if strikes exist in marketParams!
-	lpRangeOrders = lpRangeOrders.concat(await getExistingPositions(market))
+	await getExistingPositions(market)
 
 	// Initial hydration of option specs for each pool (K,T)
 	// IMPORTANT: can ONLY be run if strikes exist in marketParams!
-	optionParams = await getUpdateOptionParams(
-		optionParams,
-		lpRangeOrders,
-		market,
-		curPrice, // NOTE: we handle undefined case in function
-		ts,
-	)
+	await getUpdateOptionParams(market, curPrice, ts)
 
 	// Optional user config (withdrawExistingPositions) to start fresh
 	// NOTE: optionParam uses withdrawable boolean to determine eligibility of range order
-	if (lpRangeOrders.length > 0) {
-		lpRangeOrders = await withdrawSettleLiquidity(
-			lpRangeOrders,
-			market,
-			optionParams,
-		)
+	if (state.lpRangeOrders.length > 0) {
+		await withdrawSettleLiquidity(market)
 	}
 
-	const processedDeposits = await deployLiquidity(
-		lpRangeOrders,
-		market,
-		curPrice,
-		optionParams,
-	)
-
-	lpRangeOrders = processedDeposits.lpRangeOrders
-	optionParams = processedDeposits.optionParams
-
-	return { lpRangeOrders, optionParams }
+	await deployLiquidity(market, curPrice)
 }
 
-async function maintainPositions(
-	lpRangeOrders: Position[],
-	optionParams: OptionParams[],
-	market: string,
-) {
+async function maintainPositions(market: string) {
 	log.app(`Running position maintenance process for ${market}`)
 
 	const ts = moment.utc().unix() // seconds
@@ -151,20 +111,10 @@ async function maintainPositions(
 			`Cannot get ${market} spot price, withdrawing range orders if any exist`,
 		)
 		// NOTE: curPrice undefined will set spotOracleFailure to true in optionParams
-		optionParams = await getUpdateOptionParams(
-			optionParams,
-			lpRangeOrders,
-			market,
-			curPrice,
-			ts,
-		)
-		lpRangeOrders = await withdrawSettleLiquidity(
-			lpRangeOrders,
-			market,
-			optionParams,
-		)
+		await getUpdateOptionParams(market, curPrice, ts)
+		await withdrawSettleLiquidity(market)
 
-		return { lpRangeOrders, optionParams }
+		return
 	}
 
 	log.info(
@@ -188,74 +138,36 @@ async function maintainPositions(
 		if (belowPriceThresh) log.info(`Below Price Threshold`)
 		if (pastTimeThresh) log.info(`Time Threshold`)
 
-		optionParams = await getUpdateOptionParams(
-			optionParams,
-			lpRangeOrders,
-			market,
-			curPrice,
-			ts,
-		)
+		await getUpdateOptionParams(market, curPrice, ts)
 
 		marketParams[market].spotPrice = curPrice
 		marketParams[market].ts = ts
 
 		// remove any liquidity if present
-		lpRangeOrders = await withdrawSettleLiquidity(
-			lpRangeOrders,
-			market,
-			optionParams,
-		)
+		await withdrawSettleLiquidity(market)
 
 		// deploy liquidity in given market using marketParam settings
-		const processedDeposits = await deployLiquidity(
-			lpRangeOrders,
-			market,
-			curPrice,
-			optionParams,
-		)
-
-		lpRangeOrders = processedDeposits.lpRangeOrders
-		optionParams = processedDeposits.optionParams
+		await deployLiquidity(market, curPrice)
 	} else {
 		log.info(`No update triggered...`)
 	}
-
-	return { lpRangeOrders, optionParams }
 }
 
-async function updateMarket(
-	lpRangeOrders: Position[],
-	optionParams: OptionParams[],
-	market: string,
-) {
+async function updateMarket(market: string) {
 	if (!initialized) {
 		/*
 			INITIALIZATION CASE: if we have no reference price established for a given market then this is the
 			 initial run, so we must get price & ts and deploy all orders
 		*/
-		const processedInitialization = await initializePositions(
-			lpRangeOrders,
-			optionParams,
-			market,
-		)
-		lpRangeOrders = processedInitialization.lpRangeOrders
-		optionParams = processedInitialization.optionParams
+		await initializePositions(market)
 	} else {
 		/*
 			MAINTENANCE CASE: if we have a reference price we need to check it against current values and update
 			markets accordingly
 		*/
 
-		const processedMaintenance = await maintainPositions(
-			lpRangeOrders,
-			optionParams,
-			market,
-		)
-		lpRangeOrders = processedMaintenance.lpRangeOrders
-		optionParams = processedMaintenance.optionParams
+		await maintainPositions(market)
 	}
-
-	return { lpRangeOrders, optionParams }
 }
 
 async function runRangeOrderBot() {
@@ -290,13 +202,7 @@ async function runRangeOrderBot() {
 
 	// iterate through each market to determine is liquidity needs to be deployed/updated
 	for (const market of Object.keys(marketParams)) {
-		const updatedMarkets = await updateMarket(
-			lpRangeOrders,
-			optionParams,
-			market,
-		)
-		lpRangeOrders = updatedMarkets.lpRangeOrders
-		optionParams = updatedMarkets.optionParams
+		await updateMarket(market)
 	}
 
 	// NOTE: after first run, initialized will remain true

@@ -1,4 +1,3 @@
-import { OptionParams, Position } from '../utils/types'
 import {
 	marketParams,
 	riskFreeRate,
@@ -34,8 +33,6 @@ oracleFailure -> updated BEFORE withdrawals/deposits (in getUpdateOptionParams)
 
 // IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
 export async function getUpdateOptionParams(
-	optionParams: OptionParams[],
-	lpRangeOrders: Position[],
 	market: string,
 	curPrice: number | undefined,
 	ts: number,
@@ -51,8 +48,11 @@ export async function getUpdateOptionParams(
 	withdrawExistingPositions to false. All existing positions need to be hydrated with proper
 	spot/option data. This should only run once.
 	 */
-	if (!initialized && lpRangeOrders.length > 0) {
-		for (const existingPosition of lpRangeOrders) {
+	log.debug(
+		`Existing Number of Range Orders for ${market}: ${state.lpRangeOrders.length}`,
+	)
+	if (!initialized && state.lpRangeOrders.length > 0) {
+		for (const existingPosition of state.lpRangeOrders) {
 			const maturityTimestamp = createExpiration(existingPosition.maturity)
 			const ttm = getTTM(maturityTimestamp)
 			const notExp = ttm > 0
@@ -90,18 +90,15 @@ export async function getUpdateOptionParams(
 		const maturityTimestamp = createExpiration(maturityString)
 		const ttm = getTTM(maturityTimestamp)
 
-		optionParams = await processCallsAndPuts(
+		await processCallsAndPuts(
 			initialized,
 			market,
 			curPrice,
 			ts,
 			ttm,
 			maturityString,
-			optionParams,
 		)
 	}
-
-	return optionParams
 }
 
 async function processCallsAndPuts(
@@ -111,7 +108,6 @@ async function processCallsAndPuts(
 	ts: number,
 	ttm: number,
 	maturityString: string,
-	optionParams: OptionParams[],
 ) {
 	// NOTE: we break up by call/put strikes as they may not be the same if user populated
 
@@ -156,8 +152,7 @@ async function processCallsAndPuts(
 					MAINTENANCE CASE: if option price has moved beyond our built-in spread, we update all params and set update => true so that
 					we know this markets need to go through a withdrawal/deposit cycle.
 				 */
-				optionParams = checkForUpdate(
-					optionParams,
+				checkForUpdate(
 					market,
 					maturityString,
 					ttm,
@@ -205,8 +200,7 @@ async function processCallsAndPuts(
 				})
 			} else {
 				// MAINTENANCE CASE
-				optionParams = checkForUpdate(
-					optionParams,
+				checkForUpdate(
 					market,
 					maturityString,
 					ttm,
@@ -220,8 +214,6 @@ async function processCallsAndPuts(
 			}
 		}),
 	)
-
-	return optionParams
 }
 
 async function getGreeksAndIV(
@@ -281,7 +273,6 @@ async function getGreeksAndIV(
 }
 
 function checkForUpdate(
-	optionParams: OptionParams[],
 	market: string,
 	maturityString: string,
 	ttm: number,
@@ -310,9 +301,9 @@ function checkForUpdate(
 		log.warning(
 			`${iv === undefined ? 'iv' : 'spot'} oracle failure for ${market}`,
 		)
-		optionParams[optionIndex].ivOracleFailure = iv === undefined
-		optionParams[optionIndex].spotOracleFailure = spotPrice === undefined
-		return optionParams
+		state.optionParams[optionIndex].ivOracleFailure = iv === undefined
+		state.optionParams[optionIndex].spotOracleFailure = spotPrice === undefined
+		return
 	}
 
 	// NOTE: if the option had expired, we don't need to update its params
@@ -330,11 +321,12 @@ function checkForUpdate(
 		optionParams[optionIndex].spotOracleFailure = false
 		optionParams[optionIndex].withdrawable = true
 
-		return optionParams
+		return
 	}
 
-	//FIXME: why is index returning -1 for some options?
-	const prevOptionPrice = optionParams[optionIndex] ? optionParams[optionIndex].optionPrice : null
+	const prevOptionPrice = state.optionParams[optionIndex]
+		? state.optionParams[optionIndex].optionPrice
+		: null
 	const curOptionPrice = option!.price
 
 	// NOTE: if we had a previous oracle failure, treat case similar to initialize case
@@ -361,5 +353,5 @@ function checkForUpdate(
 		optionParams[optionIndex].spotOracleFailure = false
 	}
 
-	return optionParams
+	return
 }

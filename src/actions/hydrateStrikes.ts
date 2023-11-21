@@ -10,6 +10,4 @@ export async function hydrateStrikes(market: string, spotPrice: number) {
 	if (!marketParams[market].putStrikes && spotPrice !== undefined) {
 		marketParams[market].putStrikes = getSurroundingStrikes(spotPrice)
 	}
-
-	return
 }
