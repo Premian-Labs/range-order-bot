@@ -52,6 +52,7 @@ export async function getUpdateOptionParams(
 		for (const existingPosition of lpRangeOrders) {
 			const maturityTimestamp = createExpiration(existingPosition.maturity)
 			const ttm = getTTM(maturityTimestamp)
+			const notExp = ttm > 0
 
 			const [iv, option] = await getGreeksAndIV(
 				existingPosition.market,
@@ -68,11 +69,11 @@ export async function getUpdateOptionParams(
 				strike: existingPosition.strike,
 				spotPrice: curPrice,
 				ts,
-				iv,
-				optionPrice: option?.price,
-				delta: option?.delta,
-				theta: option?.theta,
-				vega: option?.vega,
+				iv: notExp? iv: undefined,
+				optionPrice: notExp? option?.price: undefined,
+				delta: notExp? option?.delta: undefined,
+				theta: notExp? option?.theta: undefined,
+				vega: notExp? option?.vega: undefined,
 				cycleOrders: true, // set to establish position in first cycle
 				ivOracleFailure: iv === undefined,
 				spotOracleFailure: curPrice === undefined,
@@ -85,6 +86,8 @@ export async function getUpdateOptionParams(
 	for (const maturityString of marketParams[market].maturities) {
 		const maturityTimestamp = createExpiration(maturityString)
 		const ttm = getTTM(maturityTimestamp)
+
+
 		optionParams = await processCallsAndPuts(
 			initialized,
 			market,
@@ -113,6 +116,8 @@ async function processCallsAndPuts(
 	// CALLS
 	await Promise.all(
 		marketParams[market].callStrikes!.map(async (strike) => {
+			const notExp = ttm > 0
+
 			const [iv, option] = await getGreeksAndIV(
 				market,
 				spotPrice,
@@ -120,6 +125,7 @@ async function processCallsAndPuts(
 				ttm,
 				true,
 			)
+
 			/*
                 INITIALIZATION CASE: No values have been established. We need a baseline. Update is set to true which
                 will enable initial deposits. If there is IV oracle failure, we set iv & option params to undefined and
@@ -133,11 +139,11 @@ async function processCallsAndPuts(
 					strike,
 					spotPrice,
 					ts,
-					iv,
-					optionPrice: option?.price,
-					delta: option?.delta,
-					theta: option?.theta,
-					vega: option?.vega,
+					iv: notExp? iv: undefined,
+					optionPrice: notExp? option?.price: undefined,
+					delta: notExp? option?.delta: undefined,
+					theta: notExp? option?.theta: undefined,
+					vega: notExp? option?.vega: undefined,
 					cycleOrders: true, // set to establish position in first cycle
 					ivOracleFailure: iv === undefined,
 					spotOracleFailure: spotPrice === undefined,
@@ -152,6 +158,7 @@ async function processCallsAndPuts(
 					optionParams,
 					market,
 					maturityString,
+					ttm,
 					strike,
 					iv,
 					option,
@@ -166,6 +173,8 @@ async function processCallsAndPuts(
 	// PUTS
 	await Promise.all(
 		marketParams[market].putStrikes!.map(async (strike) => {
+			const notExp = ttm > 0
+
 			const [iv, option] = await getGreeksAndIV(
 				market,
 				spotPrice,
@@ -182,11 +191,11 @@ async function processCallsAndPuts(
 					strike,
 					spotPrice,
 					ts,
-					iv,
-					optionPrice: option?.price,
-					delta: option?.delta,
-					theta: option?.theta,
-					vega: option?.vega,
+					iv: notExp? iv: undefined,
+					optionPrice: notExp? option?.price: undefined,
+					delta: notExp? option?.delta: undefined,
+					theta: notExp? option?.theta: undefined,
+					vega: notExp? option?.vega: undefined,
 					cycleOrders: true, // set to establish position in first cycle
 					ivOracleFailure: iv === undefined,
 					spotOracleFailure: spotPrice === undefined,
@@ -198,6 +207,7 @@ async function processCallsAndPuts(
 					optionParams,
 					market,
 					maturityString,
+					ttm,
 					strike,
 					iv,
 					option,
@@ -272,6 +282,7 @@ function checkForUpdate(
 	optionParams: OptionParams[],
 	market: string,
 	maturityString: string,
+	ttm: number,
 	strike: number,
 	iv: number | undefined,
 	option: Option | undefined,
@@ -290,16 +301,33 @@ function checkForUpdate(
 	)
 
 	/*
-	NOTE: CURRENT oracle failure cases
-	IMPORTANT: if iv is undefined, so should option(price & greeks).  For this reason, we can safely assume
-	'option' is not undefined in the rest of the logic (!).
+	NOTE: oracle failure cases
+	IMPORTANT: if option hasn't expired and iv is undefined, so should option(price & greeks).
 	 */
-	if (iv === undefined || spotPrice === undefined) {
+	if ((iv === undefined || spotPrice === undefined) && ttm > 0) {
 		log.warning(
 			`${iv === undefined ? 'iv' : 'spot'} oracle failure for ${market}`,
 		)
 		optionParams[optionIndex].ivOracleFailure = iv === undefined
 		optionParams[optionIndex].spotOracleFailure = spotPrice === undefined
+		return optionParams
+	}
+
+	// NOTE: if the option had expired, we don't need to update its params
+	// IMPORTANT: we switch withdrawable to true, regardless of user setting (its expired)
+	if (ttm < 0){
+		optionParams[optionIndex].spotPrice = spotPrice
+		optionParams[optionIndex].ts = ts
+		optionParams[optionIndex].iv = undefined
+		optionParams[optionIndex].optionPrice = undefined
+		optionParams[optionIndex].delta = undefined
+		optionParams[optionIndex].theta = undefined
+		optionParams[optionIndex].vega = undefined
+		optionParams[optionIndex].cycleOrders = true
+		optionParams[optionIndex].ivOracleFailure = false
+		optionParams[optionIndex].spotOracleFailure = false
+		optionParams[optionIndex].withdrawable = true
+
 		return optionParams
 	}
 
