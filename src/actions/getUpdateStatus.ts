@@ -68,14 +68,14 @@ export async function getUpdateOptionParams(
 				strike: existingPosition.strike,
 				spotPrice: curPrice,
 				ts,
-				iv: undefined,
-				optionPrice: undefined,
-				delta: undefined,
-				theta: undefined,
-				vega: undefined,
-				cycleOrders: true,
-				ivOracleFailure: false,
-				spotOracleFailure: false,
+				iv,
+				optionPrice: option?.price,
+				delta: option?.delta,
+				theta: option?.theta,
+				vega: option?.vega,
+				cycleOrders: true, // set to establish position in first cycle
+				ivOracleFailure: iv === undefined,
+				spotOracleFailure: curPrice === undefined,
 				withdrawable: withdrawExistingPositions, // This is the critical boolean
 			})
 		}

@@ -190,6 +190,8 @@ export async function processStrikes(
 		// NOTE: we checked for oracle failure so optionPrice should exist
 		const optionPrice = op.optionPrice! / spotPrice
 
+		log.debug(`OptionPrice: ${op.optionPrice!}`)
+		log.debug(`SpotPrice: ${spotPrice}`)
 		log.debug(`${isCall ? 'Call' : 'Put'} Market Price: ${marketPrice}`)
 		log.debug(`${isCall ? 'Call' : 'Put'} Fair Value: ${optionPrice}`)
 

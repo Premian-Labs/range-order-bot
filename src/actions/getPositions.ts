@@ -136,7 +136,7 @@ async function processStrike(
 			log.debug(
 				`Pool is not deployed ${market}-${maturityString}-${formatEther(
 					strike,
-				)}-${isCall ? 'C' : 'P'}`,
+				)}-${isCall ? 'C' : 'P'}. Nothing position to query.`,
 			)
 			return []
 		}
