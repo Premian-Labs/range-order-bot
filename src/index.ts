@@ -306,7 +306,8 @@ async function main() {
 		await runRangeOrderBot()
 
 		log.app(
-			'Completed, idling... View your active positions at https://app.premia.finance/pools',
+			'Cycle Completed, now idling until next refresh... View your active positions at' +
+			' https://app.premia.finance/pools',
 		)
 
 		await delay(refreshRate * 60 * 1000) // refresh rate from min -> milli sec
