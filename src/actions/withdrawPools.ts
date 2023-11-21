@@ -15,7 +15,7 @@ import { state } from '../config'
 export async function withdrawSettleLiquidity(market: string) {
 	log.app(`Attempting to withdraw liquidity from ${market}`)
 
-	const withdrawableOptions = optionParams.filter((option) => {
+	const withdrawableOptions = state.optionParams.filter((option) => {
 		return option.withdrawable && option.market === market
 	})
 
@@ -154,14 +154,14 @@ async function checkWithdrawStatus(lpRangeOrder: Position) {
 			`state.optionParams:: ${JSON.stringify(state.optionParams, null, 4)}`,
 		)
 		throw new Error(
-			'lpRangeOrder was not traceable in optionParams. Please contact dev team',
+			'lpRangeOrder was not traceable in state.optionParams. Please contact dev team',
 		)
 	}
 
 	// On oracle failure cases we withdraw all withdrawable positions
 	if (
-		optionParams[optionIndex].ivOracleFailure ||
-		optionParams[optionIndex].spotOracleFailure
+		state.optionParams[optionIndex].ivOracleFailure ||
+		state.optionParams[optionIndex].spotOracleFailure
 	) {
 		log.warning(
 			`Withdrawing ${lpRangeOrder.market}-${lpRangeOrder.maturity}-${
@@ -172,7 +172,7 @@ async function checkWithdrawStatus(lpRangeOrder: Position) {
 	}
 
 	// So long as cycleOrders is true at this point, we can process withdraw
-	return optionParams[optionIndex].cycleOrders
+	return state.optionParams[optionIndex].cycleOrders
 }
 
 async function withdrawPosition(

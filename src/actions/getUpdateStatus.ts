@@ -3,6 +3,7 @@ import {
 	riskFreeRate,
 	defaultSpread,
 	withdrawExistingPositions,
+	state,
 } from '../config'
 import { createExpiration, getTTM } from '../utils/dates'
 import { BlackScholes, Option } from '@uqee/black-scholes'
@@ -15,9 +16,9 @@ import { delay } from '../utils/time'
 const blackScholes: BlackScholes = new BlackScholes()
 
 /*
-IMPORTANT: lpRangeOrders will hold all EXISTING and NEW positions. OptionParams should ALWAYS have
-a record of new and existing positions, however, it's possible for optionParams to have MORE options than
-actual positions in lpRangeOrders due to filters such at DTE and Delta.
+IMPORTANT: state.lpRangeOrders will hold all EXISTING and NEW positions. OptionParams should ALWAYS have
+a record of new and existing positions, however, it's possible for state.optionParams to have MORE options than
+actual positions in state.lpRangeOrders due to filters such at DTE and Delta.
 
 CHEATSHEET:
 cycleOrders = true/False && withdrawable = false ======> don't touch
@@ -38,7 +39,7 @@ export async function getUpdateOptionParams(
 	ts: number,
 ) {
 	// determine if this is initialization case for this market or not (for down stream processing)
-	const filteredOptionParams = optionParams.filter((option) => {
+	const filteredOptionParams = state.optionParams.filter((option) => {
 		return option.market === market
 	})
 	const initialized = filteredOptionParams.length != 0
@@ -65,7 +66,7 @@ export async function getUpdateOptionParams(
 				existingPosition.isCall,
 			)
 
-			optionParams.push({
+			state.optionParams.push({
 				market,
 				maturity: existingPosition.maturity,
 				type: existingPosition.isCall ? 'C' : 'P',
@@ -130,7 +131,7 @@ async function processCallsAndPuts(
                 set a failure boolean which can be used to determine emergency withdraws if positions exist
              */
 			if (!initialized) {
-				optionParams.push({
+				state.optionParams.push({
 					market,
 					maturity: maturityString,
 					type: 'C',
@@ -181,7 +182,7 @@ async function processCallsAndPuts(
 			)
 			// INITIALIZATION CASE
 			if (!initialized) {
-				optionParams.push({
+				state.optionParams.push({
 					market,
 					maturity: maturityString,
 					type: 'P',
@@ -284,7 +285,7 @@ function checkForUpdate(
 	isCall: boolean,
 ) {
 	// NOTE: Find option using market/maturity/type/strike/withdrawable (should only be one)
-	const optionIndex = optionParams.findIndex(
+	const optionIndex = state.optionParams.findIndex(
 		(option) =>
 			option.market === market &&
 			option.maturity === maturityString &&
@@ -309,17 +310,17 @@ function checkForUpdate(
 	// NOTE: if the option had expired, we don't need to update its params
 	// IMPORTANT: we switch withdrawable to true, regardless of user setting (its expired)
 	if (ttm < 0) {
-		optionParams[optionIndex].spotPrice = spotPrice
-		optionParams[optionIndex].ts = ts
-		optionParams[optionIndex].iv = undefined
-		optionParams[optionIndex].optionPrice = undefined
-		optionParams[optionIndex].delta = undefined
-		optionParams[optionIndex].theta = undefined
-		optionParams[optionIndex].vega = undefined
-		optionParams[optionIndex].cycleOrders = true
-		optionParams[optionIndex].ivOracleFailure = false
-		optionParams[optionIndex].spotOracleFailure = false
-		optionParams[optionIndex].withdrawable = true
+		state.optionParams[optionIndex].spotPrice = spotPrice
+		state.optionParams[optionIndex].ts = ts
+		state.optionParams[optionIndex].iv = undefined
+		state.optionParams[optionIndex].optionPrice = undefined
+		state.optionParams[optionIndex].delta = undefined
+		state.optionParams[optionIndex].theta = undefined
+		state.optionParams[optionIndex].vega = undefined
+		state.optionParams[optionIndex].cycleOrders = true
+		state.optionParams[optionIndex].ivOracleFailure = false
+		state.optionParams[optionIndex].spotOracleFailure = false
+		state.optionParams[optionIndex].withdrawable = true
 
 		return
 	}
@@ -340,17 +341,17 @@ function checkForUpdate(
 	moved or, we previously withdrew due to an oracle failure and now its back online.
 	 */
 	if (optionPricePercChange > defaultSpread || prevOptionPrice === undefined) {
-		//NOTE: these are all non-static values in optionParams
-		optionParams[optionIndex].spotPrice = spotPrice
-		optionParams[optionIndex].ts = ts
-		optionParams[optionIndex].iv = iv
-		optionParams[optionIndex].optionPrice = curOptionPrice
-		optionParams[optionIndex].delta = option!.delta
-		optionParams[optionIndex].theta = option!.theta
-		optionParams[optionIndex].vega = option!.vega
-		optionParams[optionIndex].cycleOrders = true
-		optionParams[optionIndex].ivOracleFailure = false
-		optionParams[optionIndex].spotOracleFailure = false
+		//NOTE: these are all non-static values in state.optionParams
+		state.optionParams[optionIndex].spotPrice = spotPrice
+		state.optionParams[optionIndex].ts = ts
+		state.optionParams[optionIndex].iv = iv
+		state.optionParams[optionIndex].optionPrice = curOptionPrice
+		state.optionParams[optionIndex].delta = option!.delta
+		state.optionParams[optionIndex].theta = option!.theta
+		state.optionParams[optionIndex].vega = option!.vega
+		state.optionParams[optionIndex].cycleOrders = true
+		state.optionParams[optionIndex].ivOracleFailure = false
+		state.optionParams[optionIndex].spotOracleFailure = false
 	}
 
 	return

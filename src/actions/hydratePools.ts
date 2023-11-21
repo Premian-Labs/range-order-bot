@@ -88,7 +88,7 @@ export async function processStrikes(
 	}
 
 	// Find options by market, type, maturity and withdrawable (capable of deposits)
-	const filteredOptionParams = optionParams.filter((option) => {
+	const filteredOptionParams = state.optionParams.filter((option) => {
 		return (
 			option.market === market &&
 			option.type === (isCall ? 'C' : 'P') &&
@@ -228,8 +228,8 @@ export async function processStrikes(
 		)
 
 		// NOTE: Find option using market/maturity/type/strike/withdrawable (should only be one)
-		// IMPORTANT: we use the unfiltered optionParams
-		const optionIndex = optionParams.findIndex(
+		// IMPORTANT: we use the unfiltered state.optionParams
+		const optionIndex = state.optionParams.findIndex(
 			(option) =>
 				option.market === op.market &&
 				option.maturity === op.maturity &&
@@ -238,15 +238,15 @@ export async function processStrikes(
 				option.withdrawable,
 		)
 
-		// IMPORTANT: -1 is returned if lpRangeOrder is not in optionParams.  If this is the case there is a bug
+		// IMPORTANT: -1 is returned if lpRangeOrder is not in state.optionParams.  If this is the case there is a bug
 		if (optionIndex == -1) {
 			throw new Error(
-				'lpRangeOrder was not traceable in optionParams. Please contact dev team',
+				'lpRangeOrder was not traceable in state.optionParams. Please contact dev team',
 			)
 		}
 
 		// IMPORTANT: after processing a deposit, turn update to false
-		optionParams[optionIndex].cycleOrders = false
+		state.optionParams[optionIndex].cycleOrders = false
 	}
 }
 
@@ -762,7 +762,7 @@ async function depositRangeOrderLiq(
 			orderType: posKey.orderType,
 		}
 
-		lpRangeOrders.push({
+		state.lpRangeOrders.push({
 			market: market,
 			isCall: isCallPool,
 			strike: strike,
