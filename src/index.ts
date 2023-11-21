@@ -8,7 +8,6 @@ import {
 	spotMoveThreshold,
 	refreshRate,
 	timeThresholdHrs,
-	withdrawExistingPositions,
 	maxCollateralApproved,
 	state,
 } from './config'
@@ -54,11 +53,7 @@ async function initializePositions(market: string) {
 		)
 
 		// IMPORTANT: if user gave BOTH strikes, we can getExistingPositions to withdraw; don't need hydrateStrikes()
-		if (
-			withdrawExistingPositions &&
-			marketParams[market].callStrikes &&
-			marketParams[market].putStrikes
-		) {
+		if (marketParams[market].callStrikes && marketParams[market].putStrikes) {
 			log.warning('Attempting to withdraw existing positions...')
 
 			// IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams

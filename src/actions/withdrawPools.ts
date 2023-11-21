@@ -143,8 +143,7 @@ async function checkWithdrawStatus(lpRangeOrder: Position) {
 			option.market === lpRangeOrder.market &&
 			option.maturity === lpRangeOrder.maturity &&
 			option.type === (lpRangeOrder.isCall ? 'C' : 'P') &&
-			option.strike === lpRangeOrder.strike &&
-			option.withdrawable,
+			option.strike === lpRangeOrder.strike,
 	)
 
 	// IMPORTANT: -1 is returned if lpRangeOrder is not in state.optionParams.  If this is the case there is a bug
@@ -158,7 +157,7 @@ async function checkWithdrawStatus(lpRangeOrder: Position) {
 		)
 	}
 
-	// On oracle failure cases we withdraw all withdrawable positions
+	// On oracle failure cases we withdraw all positions
 	if (
 		state.optionParams[optionIndex].ivOracleFailure ||
 		state.optionParams[optionIndex].spotOracleFailure

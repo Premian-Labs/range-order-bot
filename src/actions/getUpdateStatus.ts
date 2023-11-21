@@ -363,6 +363,4 @@ function checkForUpdate(
 		state.optionParams[optionIndex].ivOracleFailure = false
 		state.optionParams[optionIndex].spotOracleFailure = false
 	}
-
-	return
 }

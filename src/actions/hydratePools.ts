@@ -86,7 +86,7 @@ export async function processStrikes(
 		return
 	}
 
-	// Find options by market, type, maturity and withdrawable (capable of deposits)
+	// Find options by market, type, and maturity
 	const filteredOptionParams = state.optionParams.filter((option) => {
 		return (
 			option.market === market &&
@@ -225,7 +225,7 @@ export async function processStrikes(
 			leftSideCollateralAmount,
 		)
 
-		// NOTE: Find option using market/maturity/type/strike/withdrawable (should only be one)
+		// NOTE: Find option using market/maturity/type/strike (should only be one)
 		// IMPORTANT: we use the unfiltered state.optionParams
 		const optionIndex = state.optionParams.findIndex(
 			(option) =>
