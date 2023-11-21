@@ -110,7 +110,7 @@ export async function processStrikes(
 	const filteredOptionParams = optionParams.filter((option) => {
 		return (
 			option.market === market &&
-			option.type === (isCall? 'C' : 'P') &&
+			option.type === (isCall ? 'C' : 'P') &&
 			option.maturity === maturityString &&
 			option.withdrawable
 		)
@@ -254,7 +254,7 @@ export async function processStrikes(
 				option.maturity === op.maturity &&
 				option.type === (isCall ? 'C' : 'P') &&
 				option.strike === op.strike &&
-				option.withdrawable
+				option.withdrawable,
 		)
 
 		// IMPORTANT: -1 is returned if lpRangeOrder is not in optionParams.  If this is the case there is a bug

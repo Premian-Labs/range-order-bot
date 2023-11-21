@@ -3,71 +3,68 @@ import { parseEther, formatEther } from 'ethers'
 import { marketParams } from '../config'
 import { lpAddress, addresses } from '../config/constants'
 import { Position } from '../utils/types'
+import flatten from 'lodash.flatten'
 import {
 	createExpiration,
 	getLast30Days,
 	nextYearOfMaturities,
 } from '../utils/dates'
-import { premia } from '../config/contracts'
+import {premia, botMultiCallProvider, poolFactory} from '../config/contracts'
 import { parseTokenId } from '../utils/tokens'
 import { log } from '../utils/logs'
-import { calculatePoolAddress } from '../utils/pools'
 
 // NOTE: this will find ALL range orders by user (not just from the bot)
 // IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
 export async function getExistingPositions(market: string) {
-	let lpRangeOrders: Position[] = []
+	let processedRangeOrders: Position[][] = []
 
 	log.info(`Getting existing positions for: ${market}`)
 
 	try {
 		const maturities = [...getLast30Days(), ...nextYearOfMaturities()].map(
 			// NOTE: maturity now follows "03NOV23" string format
-			(maturity) => maturity.format('DDMMMYY'),
+			(maturity) => maturity.format('DDMMMYY').toUpperCase(),
 		)
 
-		await Promise.all(
+		processedRangeOrders = await Promise.all(
 			maturities.map((maturityString) =>
-				processMaturity(maturityString, market, lpRangeOrders),
+				processMaturity(maturityString, market),
 			),
 		)
 
 		log.info(`Finished getting existing positions!`)
-		log.info(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
+		log.info(
+			`Current LP Positions: ${JSON.stringify(processedRangeOrders, null, 4)}`,
+		)
 	} catch (err) {
 		log.error(`Error getting existing positions: ${err}`)
-		log.debug(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
+		log.debug(
+			`Current LP Positions: ${JSON.stringify(processedRangeOrders, null, 4)}`,
+		)
 	}
 
 	// NOTE: lpRangeOrders array is populated in the last function call => processTokenIds ()
-	return lpRangeOrders
+	return flatten(processedRangeOrders)
 }
 
-async function processMaturity(
-	maturityString: string,
-	market: string,
-	lpRangeOrders: Position[],
-) {
+async function processMaturity(maturityString: string, market: string) {
 	let maturityTimestamp: number
 
 	try {
+		// 10NOV23 => 1233645758
 		maturityTimestamp = createExpiration(maturityString)
 	} catch {
 		log.error(`Invalid maturity: ${maturityString}`)
-		return
+		return []
 	}
 
-	await Promise.all(
+	const processedRangeOrders: Position[][] = await Promise.all(
 		[true, false].map((isCall) =>
-			processOptionType(
-				isCall,
-				maturityString,
-				market,
-				maturityTimestamp,
-				lpRangeOrders,
-			),
+			processOptionType(isCall, maturityString, market, maturityTimestamp),
 		),
 	)
+ 	log.debug(`Processed Maturity: ${JSON.stringify(flatten(processedRangeOrders), null, 4)}`)
+	return flatten(processedRangeOrders)
 }
 
 async function processOptionType(
@@ -75,7 +72,6 @@ async function processOptionType(
 	maturityString: string,
 	market: string,
 	maturityTimestamp: number,
-	lpRangeOrders: Position[],
 ) {
 	//NOTE: we know there are strikes as we hydrated it in hydrateStrikes()
 	const strikes = isCall
@@ -83,18 +79,20 @@ async function processOptionType(
 		: marketParams[market].putStrikes!
 	const strikesBigInt = strikes.map((strike) => parseEther(strike.toString()))
 
-	await Promise.all(
-		strikesBigInt.map((strike) =>
-			processStrike(
-				strike,
-				isCall,
-				maturityString,
-				market,
-				maturityTimestamp,
-				lpRangeOrders,
-			),
+	const processedRangeOrders: Position[][] = await Promise.all(
+		strikesBigInt.map(
+			async (strike) =>
+				await processStrike(
+					strike,
+					isCall,
+					maturityString,
+					market,
+					maturityTimestamp,
+				),
 		),
 	)
+	log.debug(`Processed OptionType: ${JSON.stringify(flatten(processedRangeOrders), null, 4)}`)
+	return flatten(processedRangeOrders)
 }
 
 async function processStrike(
@@ -103,7 +101,6 @@ async function processStrike(
 	maturityString: string,
 	market: string,
 	maturityTimestamp: number,
-	lpRangeOrders: Position[],
 ) {
 	const poolKey: PoolKey = {
 		base: marketParams[market].address,
@@ -119,16 +116,30 @@ async function processStrike(
 	old pools that already exist.
 	 */
 	let poolAddress: string
-	// TODO: does getPoolAddress tell us if its deployed? If so, we can just return here
+	let isDeployed: boolean
 	try {
-		poolAddress = await premia.pools.getPoolAddress(poolKey)
+		[poolAddress, isDeployed] = await poolFactory.getPoolAddress(poolKey)
+
+		if (!isDeployed){
+			log.warning(
+				`Pool is not deployed ${market}-${maturityString}-${formatEther(
+					strike,
+				)}-${isCall ? 'C' : 'P'}`,
+			)
+			return []
+		}
 	} catch {
-		poolAddress = calculatePoolAddress(poolKey)
+		log.warning(
+			`Can not get poolAddress ${market}-${maturityString}-${formatEther(
+				strike,
+			)}-${isCall ? 'C' : 'P'}`,
+		)
+		return []
 	}
 
 	const pool = premia.contracts.getPoolContract(
 		poolAddress,
-		premia.multicallProvider as any,
+		botMultiCallProvider,
 	)
 
 	let tokenIds: bigint[]
@@ -143,7 +154,7 @@ async function processStrike(
 				strike,
 			)}-${isCall ? 'C' : 'P'}`,
 		)
-		return
+		return []
 	}
 
 	if (tokenIds.length > 0) {
@@ -161,7 +172,8 @@ async function processStrike(
 		)
 	}
 
-	await processTokenIds(
+
+	const processedRangeOrders: Position[] = await processTokenIds(
 		tokenIds,
 		pool,
 		maturityString,
@@ -169,8 +181,10 @@ async function processStrike(
 		isCall,
 		market,
 		poolAddress,
-		lpRangeOrders,
 	)
+
+	log.debug(`Processed Strike: ${JSON.stringify(flatten(processedRangeOrders), null, 4)}`)
+	return processedRangeOrders
 }
 
 async function processTokenIds(
@@ -181,8 +195,8 @@ async function processTokenIds(
 	isCall: boolean,
 	market: string,
 	poolAddress: string,
-	lpRangeOrders: Position[],
 ) {
+	const lpRangeOrders: Position[] = []
 	await Promise.all(
 		tokenIds.map(async (tokenId) => {
 			const positionKey = parseTokenId(tokenId)
@@ -211,4 +225,5 @@ async function processTokenIds(
 			}
 		}),
 	)
+	return lpRangeOrders
 }

@@ -40,7 +40,7 @@ export async function withdrawSettleLiquidity(
 	for (const filteredRangeOrder of filteredRangeOrders) {
 		const withdrawable = await checkWithdrawStatus(
 			filteredRangeOrder,
-			optionParams,
+			withdrawableOptions,
 		)
 
 		// skip lpRangeOrder if not withdrawable
@@ -142,18 +142,19 @@ async function checkWithdrawStatus(
 	lpRangeOrder: Position,
 	optionParams: OptionParams[],
 ) {
-	// NOTE: Find option using market/maturity/type/strike/WITHDRAWABLE (should only be one)
+	// NOTE: Find option using market/maturity/type/strike (should only be one)
 	const optionIndex = optionParams.findIndex(
 		(option) =>
 			option.market === lpRangeOrder.market &&
 			option.maturity === lpRangeOrder.maturity &&
 			option.type === (lpRangeOrder.isCall ? 'C' : 'P') &&
-			option.strike === lpRangeOrder.strike &&
-			option.withdrawable,
+			option.strike === lpRangeOrder.strike
 	)
 
 	// IMPORTANT: -1 is returned if lpRangeOrder is not in optionParams.  If this is the case there is a bug
 	if (optionIndex == -1) {
+		log.debug(`lpRangeOrder: ${JSON.stringify(lpRangeOrder, null, 4)}`)
+		log.debug(`optionParams:: ${JSON.stringify(optionParams, null, 4)}`)
 		throw new Error(
 			'lpRangeOrder was not traceable in optionParams. Please contact dev team',
 		)

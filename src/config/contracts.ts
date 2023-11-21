@@ -34,9 +34,9 @@ export const ivOracle = IVolatilityOracle__factory.connect(
 	ivMultiCallProvider,
 )
 
-const spotProvider = new JsonRpcProvider(rpcUrl)
-const spotMultiCallProvider = MulticallWrapper.wrap(spotProvider)
+const botProvider = new JsonRpcProvider(rpcUrl)
+export const botMultiCallProvider = MulticallWrapper.wrap(botProvider)
 export const chainlink = IChainlinkAdapter__factory.connect(
 	addresses.core.ChainlinkAdapterProxy.address,
-	spotMultiCallProvider,
+	botMultiCallProvider,
 )
