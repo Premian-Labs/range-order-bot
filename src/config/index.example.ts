@@ -50,6 +50,8 @@ are priced in USDC but based on the strike price. For example, a 1500 strike
 put at 0.004 is (0.004 * 1500) in USDC terms.
  */
 
+// TODO FEATURE: enable Put only or Call only trading
+// TODO FEATURE: enable one-sided trading only (ie. left or right side)
 export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,

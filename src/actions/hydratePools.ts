@@ -265,8 +265,18 @@ async function fetchOrDeployPool(
 
 	log.debug(`${isCall ? 'Call' : 'Put'} PoolKey:`, poolKey)
 
-	//TODO: try catch around this?
-	const [poolAddress, isDeployed] = await poolFactory.getPoolAddress(poolKey)
+	let poolAddress: string
+	let isDeployed: boolean
+	try{
+		[poolAddress, isDeployed] = await poolFactory.getPoolAddress(poolKey)
+	}catch(e){
+		log.warning(
+			`${market} ${maturityString}-${strike}-${
+				isCall ? 'C' : 'P'
+			}. Cannot be Deployed.`,
+		)
+		return null
+	}
 
 	log.debug(`${isCall ? 'Call' : 'Put'} poolAddress: ${poolAddress}`)
 

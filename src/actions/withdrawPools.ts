@@ -97,7 +97,6 @@ export async function withdrawSettleLiquidity(market: string) {
 		if (lpTokenBalance == 0) {
 			log.warning(`Can not withdraw or settle. No position balance.`)
 			// remove range order from array no action can be taken now or later
-			// TODO: remove range order from array
 			state.lpRangeOrders = state.lpRangeOrders.filter(
 				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
 			)
@@ -116,7 +115,6 @@ export async function withdrawSettleLiquidity(market: string) {
 			await withdrawPosition(executablePool, posKey, poolBalance, exp)
 
 			// remove range order from array if withdraw/settle is successful
-			// TODO: remove range order from array
 			state.lpRangeOrders = state.lpRangeOrders.filter(
 				(rangeOrder) => !isEqual(rangeOrder, filteredRangeOrder),
 			)
