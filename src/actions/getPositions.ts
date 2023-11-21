@@ -9,7 +9,7 @@ import {
 	getLast30Days,
 	nextYearOfMaturities,
 } from '../utils/dates'
-import {premia, botMultiCallProvider, poolFactory} from '../config/contracts'
+import { premia, botMultiCallProvider, poolFactory } from '../config/contracts'
 import { parseTokenId } from '../utils/tokens'
 import { log } from '../utils/logs'
 
@@ -63,7 +63,13 @@ async function processMaturity(maturityString: string, market: string) {
 			processOptionType(isCall, maturityString, market, maturityTimestamp),
 		),
 	)
- 	log.debug(`Processed Maturity: ${JSON.stringify(flatten(processedRangeOrders), null, 4)}`)
+	log.debug(
+		`Processed Maturity: ${JSON.stringify(
+			flatten(processedRangeOrders),
+			null,
+			4,
+		)}`,
+	)
 	return flatten(processedRangeOrders)
 }
 
@@ -91,7 +97,13 @@ async function processOptionType(
 				),
 		),
 	)
-	log.debug(`Processed OptionType: ${JSON.stringify(flatten(processedRangeOrders), null, 4)}`)
+	log.debug(
+		`Processed OptionType: ${JSON.stringify(
+			flatten(processedRangeOrders),
+			null,
+			4,
+		)}`,
+	)
 	return flatten(processedRangeOrders)
 }
 
@@ -118,9 +130,9 @@ async function processStrike(
 	let poolAddress: string
 	let isDeployed: boolean
 	try {
-		[poolAddress, isDeployed] = await poolFactory.getPoolAddress(poolKey)
+		;[poolAddress, isDeployed] = await poolFactory.getPoolAddress(poolKey)
 
-		if (!isDeployed){
+		if (!isDeployed) {
 			log.warning(
 				`Pool is not deployed ${market}-${maturityString}-${formatEther(
 					strike,
@@ -172,7 +184,6 @@ async function processStrike(
 		)
 	}
 
-
 	const processedRangeOrders: Position[] = await processTokenIds(
 		tokenIds,
 		pool,
@@ -183,7 +194,13 @@ async function processStrike(
 		poolAddress,
 	)
 
-	log.debug(`Processed Strike: ${JSON.stringify(flatten(processedRangeOrders), null, 4)}`)
+	log.debug(
+		`Processed Strike: ${JSON.stringify(
+			flatten(processedRangeOrders),
+			null,
+			4,
+		)}`,
+	)
 	return processedRangeOrders
 }
 

@@ -148,7 +148,7 @@ async function checkWithdrawStatus(
 			option.market === lpRangeOrder.market &&
 			option.maturity === lpRangeOrder.maturity &&
 			option.type === (lpRangeOrder.isCall ? 'C' : 'P') &&
-			option.strike === lpRangeOrder.strike
+			option.strike === lpRangeOrder.strike,
 	)
 
 	// IMPORTANT: -1 is returned if lpRangeOrder is not in optionParams.  If this is the case there is a bug

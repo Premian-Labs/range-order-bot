@@ -45,10 +45,9 @@ export async function getUpdateOptionParams(
 
 	/*
 	NOTE: We need to ensure existing positions are IGNORED if a user specifies this by setting
-	withdrawExistingPositions to false. Since all existing positions are populated into lpRangeOrders
-	we need to populate them into optionParams.  This should only run once.
+	withdrawExistingPositions to false.  This should only run once.
 	 */
-	if (!initialized && lpRangeOrders.length > 0 && !withdrawExistingPositions) {
+	if (!initialized && lpRangeOrders.length > 0) {
 		for (const existingPosition of lpRangeOrders) {
 			optionParams.push({
 				market,
@@ -65,7 +64,7 @@ export async function getUpdateOptionParams(
 				cycleOrders: true,
 				ivOracleFailure: false,
 				spotOracleFailure: false,
-				withdrawable: false, // This is the critical boolean
+				withdrawable: withdrawExistingPositions, // This is the critical boolean
 			})
 		}
 	}

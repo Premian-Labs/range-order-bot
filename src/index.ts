@@ -116,7 +116,6 @@ async function initializePositions(
 
 	log.debug(`Flattened optionParams${JSON.stringify(optionParams, null, 4)}`)
 
-
 	// Optional user config (withdrawExistingPositions) to start fresh
 	// NOTE: optionParam uses withdrawable boolean to determine eligibility of range order
 	if (lpRangeOrders.length > 0) {
