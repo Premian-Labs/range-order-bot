@@ -25,7 +25,6 @@ import {
 import { marketParams } from '../config'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
-import { Option } from '@uqee/black-scholes/build'
 
 export async function deployLiquidity(
 	lpRangeOrders: Position[],
@@ -111,7 +110,7 @@ export async function processStrikes(
 	const filteredOptionParams = optionParams.filter((option) => {
 		return (
 			option.market === market &&
-			isCall &&
+			option.type === (isCall? 'C' : 'P') &&
 			option.maturity === maturityString &&
 			option.withdrawable
 		)
@@ -248,14 +247,22 @@ export async function processStrikes(
 		)
 
 		// NOTE: Find option using market/maturity/type/strike/withdrawable (should only be one)
+		// IMPORTANT: we use the unfiltered optionParams
 		const optionIndex = optionParams.findIndex(
 			(option) =>
 				option.market === op.market &&
 				option.maturity === op.maturity &&
 				option.type === (isCall ? 'C' : 'P') &&
 				option.strike === op.strike &&
-				option.withdrawable,
+				option.withdrawable
 		)
+
+		// IMPORTANT: -1 is returned if lpRangeOrder is not in optionParams.  If this is the case there is a bug
+		if (optionIndex == -1) {
+			throw new Error(
+				'lpRangeOrder was not traceable in optionParams. Please contact dev team',
+			)
+		}
 
 		// IMPORTANT: after processing a deposit, turn update to false
 		optionParams[optionIndex].cycleOrders = false
@@ -264,6 +271,7 @@ export async function processStrikes(
 	return { lpRangeOrders, optionParams }
 }
 
+// FIXME: seems to be inconsistency with deployments...some are failing to deploy
 async function fetchOrDeployPool(
 	lpRangeOrders: Position[],
 	market: string,
