@@ -20,9 +20,12 @@ export async function getCollateralApprovalAmount(
 		const lowerTick = parseFloat(formatEther(posKey.lower))
 		const upperTick = parseFloat(formatEther(posKey.upper))
 		const averagePrice = (lowerTick + upperTick) / 2
-		const collateralValue = isCallPool
-			? depositSize * averagePrice
-			: depositSize * strike * averagePrice
+		const collateralValue = Number(
+			(isCallPool
+				? depositSize * averagePrice
+				: depositSize * strike * averagePrice
+			).toFixed(18),
+		)
 
 		log.info(
 			`LEFT side collateral required: ${collateralValue} ${collateralName}`,
@@ -31,7 +34,9 @@ export async function getCollateralApprovalAmount(
 		return collateralValue
 		// Right side order using (collateral only)
 	} else if (posKey.orderType == OrderType.COLLATERAL_SHORT && !isLeftSide) {
-		const collateralValue = isCallPool ? depositSize : depositSize * strike
+		const collateralValue = Number(
+			(isCallPool ? depositSize : depositSize * strike).toFixed(18),
+		)
 
 		log.info(
 			`RIGHT side collateral required: ${collateralValue} ${collateralName}`,

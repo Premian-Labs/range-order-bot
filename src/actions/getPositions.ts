@@ -114,12 +114,6 @@ async function processStrike(
 		isCallPool: isCall,
 	}
 
-	log.debug(
-		`Checking Balance for: ${maturityString}-${formatEther(strike)}-${
-			isCall ? 'C' : 'P'
-		}`,
-	)
-
 	/*
 	NOTE: this is here for contract upgrades that could cause issues with getting
 	old pools that already exist.
