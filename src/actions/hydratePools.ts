@@ -25,6 +25,7 @@ import {
 import { marketParams } from '../config'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
+import { Option } from '@uqee/black-scholes/build'
 
 export async function deployLiquidity(
 	lpRangeOrders: Position[],
@@ -40,7 +41,7 @@ export async function deployLiquidity(
 			log.info(`Processing strikes for ${market}-${maturityString} expiration`)
 
 			// calls
-			lpRangeOrders = await processStrikes(
+			const processedCallStrikes = await processStrikes(
 				market,
 				spotPrice,
 				marketParams,
@@ -49,9 +50,11 @@ export async function deployLiquidity(
 				lpRangeOrders,
 				optionParams,
 			)
+			lpRangeOrders = processedCallStrikes.lpRangeOrders
+			optionParams = processedCallStrikes.optionParams
 
 			// puts
-			lpRangeOrders = await processStrikes(
+			const processedPutStrikes = await processStrikes(
 				market,
 				spotPrice,
 				marketParams,
@@ -60,17 +63,19 @@ export async function deployLiquidity(
 				lpRangeOrders,
 				optionParams,
 			)
+			lpRangeOrders = processedPutStrikes.lpRangeOrders
+			optionParams = processedPutStrikes.optionParams
 		}
 	} catch (err) {
 		log.error(`Error deploying liquidity: ${err}`)
-		log.error(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
-		return lpRangeOrders
+		log.info(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
+		return { lpRangeOrders, optionParams }
 	}
 
 	log.info(`All Positions Successfully Processed for ${market}!`)
 	log.info(`Current LP Positions: ${JSON.stringify(lpRangeOrders, null, 4)}`)
 
-	return lpRangeOrders
+	return { lpRangeOrders, optionParams }
 }
 
 export async function processStrikes(
@@ -91,7 +96,7 @@ export async function processStrikes(
 	// check if option already expired
 	if (daysToExpiration <= 0) {
 		log.warning(`Skipping expiration date: ${maturityString} is in the past`)
-		return lpRangeOrders
+		return { lpRangeOrders, optionParams }
 	}
 
 	// check if option expiration is more than 1 year out
@@ -99,7 +104,7 @@ export async function processStrikes(
 		log.warning(
 			`Skipping expiration date: ${maturityString} is more than 1 year out`,
 		)
-		return lpRangeOrders
+		return { lpRangeOrders, optionParams }
 	}
 
 	// Find options by market, type, maturity and withdrawable (capable of deposits)
@@ -256,7 +261,7 @@ export async function processStrikes(
 		optionParams[optionIndex].cycleOrders = false
 	}
 
-	return lpRangeOrders
+	return { lpRangeOrders, optionParams }
 }
 
 async function fetchOrDeployPool(

@@ -27,7 +27,11 @@ let initialized = false
 let lpRangeOrders: Position[] = []
 let optionParams: OptionParams[] = []
 
-async function initializePositions(lpRangeOrders: Position[], market: string) {
+async function initializePositions(
+	lpRangeOrders: Position[],
+	optionParams: OptionParams[],
+	market: string,
+) {
 	log.app(`Initializing positions for ${market}`)
 
 	const callStrikesOnly =
@@ -42,7 +46,7 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 		log.warning(
 			`Can only run ${market} with BOTH call/put strike arrays or NEITHER `,
 		)
-		return lpRangeOrders
+		return { lpRangeOrders, optionParams }
 	}
 
 	// NOTE: may return undefined
@@ -84,7 +88,7 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 			}
 		}
 
-		return lpRangeOrders
+		return { lpRangeOrders, optionParams }
 	}
 
 	marketParams[market].spotPrice = curPrice
@@ -118,20 +122,26 @@ async function initializePositions(lpRangeOrders: Position[], market: string) {
 		)
 	}
 
-	lpRangeOrders = await deployLiquidity(
+	const processedDeposits = await deployLiquidity(
 		lpRangeOrders,
 		market,
 		curPrice,
 		optionParams,
 	)
+	lpRangeOrders = processedDeposits.lpRangeOrders
+	optionParams = processedDeposits.optionParams
 
 	// initialization path complete
 	initialized = true
 
-	return lpRangeOrders
+	return { lpRangeOrders, optionParams }
 }
 
-async function maintainPositions(lpRangeOrders: Position[], market: string) {
+async function maintainPositions(
+	lpRangeOrders: Position[],
+	optionParams: OptionParams[],
+	market: string,
+) {
 	log.app(`Running position maintenance process for ${market}`)
 
 	const ts = moment.utc().unix() // seconds
@@ -154,7 +164,8 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 			market,
 			optionParams,
 		)
-		return lpRangeOrders
+
+		return { lpRangeOrders, optionParams }
 	}
 
 	log.info(
@@ -197,36 +208,55 @@ async function maintainPositions(lpRangeOrders: Position[], market: string) {
 		)
 
 		// deploy liquidity in given market using marketParam settings
-		lpRangeOrders = await deployLiquidity(
+		const processedDeposits = await deployLiquidity(
 			lpRangeOrders,
 			market,
 			curPrice,
 			optionParams,
 		)
+
+		lpRangeOrders = processedDeposits.lpRangeOrders
+		optionParams = processedDeposits.optionParams
 	} else {
 		log.info(`No update triggered...`)
 	}
 
-	return lpRangeOrders
+	return { lpRangeOrders, optionParams }
 }
 
-async function updateMarket(lpRangeOrders: Position[], market: string) {
+async function updateMarket(
+	lpRangeOrders: Position[],
+	optionParams: OptionParams[],
+	market: string,
+) {
 	if (!initialized) {
 		/*
 			INITIALIZATION CASE: if we have no reference price established for a given market then this is the
 			 initial run, so we must get price & ts and deploy all orders
 		*/
-		lpRangeOrders = await initializePositions(lpRangeOrders, market)
+		const processedInitialization = await initializePositions(
+			lpRangeOrders,
+			optionParams,
+			market,
+		)
+		lpRangeOrders = processedInitialization.lpRangeOrders
+		optionParams = processedInitialization.optionParams
 	} else {
 		/*
 			MAINTENANCE CASE: if we have a reference price we need to check it against current values and update
 			markets accordingly
 		*/
 
-		lpRangeOrders = await maintainPositions(lpRangeOrders, market)
+		const processedMaintenance = await maintainPositions(
+			lpRangeOrders,
+			optionParams,
+			market,
+		)
+		lpRangeOrders = processedMaintenance.lpRangeOrders
+		optionParams = processedMaintenance.optionParams
 	}
 
-	return lpRangeOrders
+	return { lpRangeOrders, optionParams }
 }
 
 async function runRangeOrderBot() {
@@ -261,7 +291,13 @@ async function runRangeOrderBot() {
 
 	// iterate through each market to determine is liquidity needs to be deployed/updated
 	for (const market of Object.keys(marketParams)) {
-		lpRangeOrders = await updateMarket(lpRangeOrders, market)
+		const updatedMarkets = await updateMarket(
+			lpRangeOrders,
+			optionParams,
+			market,
+		)
+		lpRangeOrders = updatedMarkets.lpRangeOrders
+		optionParams = updatedMarkets.optionParams
 	}
 }
 
