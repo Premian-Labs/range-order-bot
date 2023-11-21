@@ -1,10 +1,11 @@
 import { formatEther } from 'ethers'
-import { chainlink } from '../contracts'
+import { chainlink } from '../config/contracts'
 import { marketParams } from '../config'
-import { addresses } from '../constants'
+import { addresses } from '../config/constants'
 import { delay } from './time'
 import { log } from './logs'
 
+// TODO: potentially use coingecko API price as backup to chainlink oracle
 export async function getSpotPrice(market: string, retry: boolean = true) {
 	try {
 		return parseFloat(
@@ -15,7 +16,7 @@ export async function getSpotPrice(market: string, retry: boolean = true) {
 				),
 			),
 		)
-	} catch (e) {
+	} catch (err) {
 		await delay(2000)
 
 		if (retry) {

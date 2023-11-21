@@ -1,7 +1,7 @@
 import { OrderType } from '@premia/v3-sdk'
 import { formatEther } from 'ethers'
-import { VALID_ORDER_WIDTHS } from '../constants'
-import { PosKey } from '../types'
+import { VALID_ORDER_WIDTHS } from '../config/constants'
+import { PosKey } from './types'
 import { log } from './logs'
 
 export async function getCollateralApprovalAmount(
@@ -20,9 +20,13 @@ export async function getCollateralApprovalAmount(
 		const lowerTick = parseFloat(formatEther(posKey.lower))
 		const upperTick = parseFloat(formatEther(posKey.upper))
 		const averagePrice = (lowerTick + upperTick) / 2
-		const collateralValue = isCallPool
-			? depositSize * averagePrice
-			: depositSize * strike * averagePrice
+
+		const baseDecimal = market === `WBTC` ? 8 : 18
+		const collateralValue = Number(
+			isCallPool
+				? (depositSize * averagePrice).toFixed(baseDecimal)
+				: (depositSize * strike * averagePrice).toFixed(6),
+		)
 
 		log.info(
 			`LEFT side collateral required: ${collateralValue} ${collateralName}`,
@@ -31,7 +35,9 @@ export async function getCollateralApprovalAmount(
 		return collateralValue
 		// Right side order using (collateral only)
 	} else if (posKey.orderType == OrderType.COLLATERAL_SHORT && !isLeftSide) {
-		const collateralValue = isCallPool ? depositSize : depositSize * strike
+		const collateralValue = Number(
+			(isCallPool ? depositSize : depositSize * strike).toFixed(18),
+		)
 
 		log.info(
 			`RIGHT side collateral required: ${collateralValue} ${collateralName}`,
@@ -42,7 +48,7 @@ export async function getCollateralApprovalAmount(
 		/*
 			NOTE: all other cases, we are  use options instead of collateral so the collateral
 			amount to approve is zero
-			ie. order type CS & isLeftSide -> short options being posted on LEFT side
+			ie order type CS & isLeftSide -> short options being posted on LEFT side
 		*/
 		return 0
 	}

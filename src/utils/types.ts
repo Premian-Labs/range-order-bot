@@ -23,6 +23,7 @@ export interface MarketParam {
 	putStrikes?: number[] // if not passed, will be inferred from delta range
 	depositSize: number
 	maxExposure: number
+	minOptionPrice: number
 	spotPrice?: number
 	ts?: number
 }
@@ -37,4 +38,21 @@ export interface Position {
 	poolAddress: string
 	depositSize: number
 	posKey: SerializedPosKey
+}
+
+export interface OptionParams {
+	market: string //static
+	maturity: string //static
+	type: 'C' | 'P' //static
+	strike: number //static
+	spotPrice: number | undefined
+	ts: number
+	iv: number | undefined
+	optionPrice: number | undefined
+	delta: number | undefined
+	theta: number | undefined
+	vega: number | undefined
+	cycleOrders: boolean
+	ivOracleFailure: boolean
+	spotOracleFailure: boolean
 }

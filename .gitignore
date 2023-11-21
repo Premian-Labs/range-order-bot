@@ -3,10 +3,7 @@
 node_modules
 yarn.lock
 dist
-abi
-
-typechain
-
-src/config/lpPositions.json
-
 .npmrc
+
+src/config/index.ts
+typechain
