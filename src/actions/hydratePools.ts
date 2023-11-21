@@ -17,7 +17,7 @@ import {
 import { IPool, OrderType, PoolKey, TokenType } from '@premia/v3-sdk'
 import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
 import { setApproval } from '../utils/tokens'
-import { premia, signerAddress, poolFactory } from '../config/contracts'
+import {premia, signerAddress, poolFactory, botMultiCallProvider} from '../config/contracts'
 import {
 	getCollateralApprovalAmount,
 	getValidRangeWidth,
@@ -150,6 +150,7 @@ export async function processStrikes(
 
 		log.info(`Depositing for ${op.maturity}-${op.strike}-${op.type}`)
 
+		// NOTE: if null, we don't process strike for deposit
 		const fetchedPoolInfo = await fetchOrDeployPool(
 			lpRangeOrders,
 			op.market,
@@ -188,6 +189,7 @@ export async function processStrikes(
 
 		// Option price normalized
 		// NOTE: we checked for oracle failure so optionPrice should exist
+		// TODO: check undefined potential
 		const optionPrice = op.optionPrice! / spotPrice
 
 		log.debug(`OptionPrice: ${op.optionPrice!}`)
@@ -292,22 +294,29 @@ async function fetchOrDeployPool(
 
 	log.debug(`${isCall ? 'Call' : 'Put'} PoolKey:`, poolKey)
 
+	//TODO: try catch around this?
 	const [poolAddress, isDeployed] = await poolFactory.getPoolAddress(poolKey)
 
 	log.debug(`${isCall ? 'Call' : 'Put'} poolAddress: ${poolAddress}`)
 
-	const found = lpRangeOrders.find(
-		(position) =>
-			position.poolAddress === poolAddress && position.isCall === isCall,
-	)
-
-	if (found) {
-		log.warning(
-			`Skipping ${market} ${maturityString}-${strike}-${
+	if (isDeployed) {
+		log.debug(
+			`${market} ${maturityString}-${strike}-${
 				isCall ? 'C' : 'P'
-			}. Already Deposited.`,
+			}. Already Deployed.`,
 		)
-		return null
+		const multicallPool = premia.contracts.getPoolContract(
+			poolAddress,
+			botMultiCallProvider,
+		)
+
+		// Create a new provider with signer to execute transactions
+		const executablePool = premia.contracts.getPoolContract(
+			poolAddress,
+			premia.signer as any,
+		)
+
+		return { multicallPool, executablePool, poolAddress }
 	}
 
 	if (!isDeployed && !autoDeploy) {
