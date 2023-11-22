@@ -10,38 +10,23 @@ import {
 	state,
 } from './config'
 import { addresses } from './config/constants'
-import { getExistingPositions } from './actions/getPositions'
-import { deployLiquidity } from './actions/hydratePools'
 import { premia } from './config/contracts'
 import { log } from './utils/logs'
 import { delay } from './utils/time'
 import { getSpotPrice } from './utils/prices'
 import { setApproval } from './utils/tokens'
 import { getUpdateOptionParams } from './actions/getUpdateStatus'
+import { withdrawSettleLiquidity } from './actions/withdrawPools'
 import { hydrateStrikes } from './actions/hydrateStrikes'
+import { getExistingPositions } from './actions/getPositions'
+import { deployLiquidity } from './actions/hydratePools'
 
 let initialized = false
 
 async function initializePositions(market: string) {
 	log.app(`Initializing positions for ${market}`)
 
-	const callStrikesOnly =
-		marketParams[market].callStrikes !== undefined &&
-		marketParams[market].putStrikes === undefined
-
-	const putStrikesOnly =
-		marketParams[market].callStrikes === undefined &&
-		marketParams[market].putStrikes !== undefined
-
-	// marketParams configuration check
-	if (callStrikesOnly || putStrikesOnly) {
-		log.warning(
-			`Can only run ${market} with BOTH call/put strike arrays or NEITHER `,
-		)
-		return
-	}
-
-	// NOTE: may return undefined
+	// NOTE: getSpotPrice may return undefined if the oracle calls fail
 	const curPrice = await getSpotPrice(market)
 	const ts = moment.utc().unix()
 
@@ -49,6 +34,13 @@ async function initializePositions(market: string) {
 		log.warning(
 			`Skipping initialization for ${market}, spot price feed is not working`,
 		)
+
+		const spotPriceEstimate = marketParams[market].spotPriceEstimate
+
+		// IMPORTANT: attempts to hydrate strikes with spot price estimate, to be able to withdraw all positions
+		if (spotPriceEstimate) {
+			await hydrateStrikes(market, spotPriceEstimate)
+		}
 
 		// IMPORTANT: if user gave BOTH strikes, we can getExistingPositions to withdraw; don't need hydrateStrikes()
 		if (marketParams[market].callStrikes && marketParams[market].putStrikes) {
@@ -113,6 +105,10 @@ async function maintainPositions(market: string) {
 		moment.utc().format('YYYY-MM-HH:mm:ss'),
 	)
 
+	await updateOnTrigger(market, curPrice, ts)
+}
+
+async function updateOnTrigger(market: string, curPrice: number, ts: number) {
 	// All conditional thresholds that trigger an update
 	const refPrice = marketParams[market].spotPrice!
 	const abovePriceThresh = curPrice > refPrice * (1 + spotMoveThreshold)
@@ -191,6 +187,7 @@ async function runRangeOrderBot() {
 	}
 
 	// iterate through each market to determine is liquidity needs to be deployed/updated
+	// @dev: this cannot be parallelized because it would run into nonce issues
 	for (const market of Object.keys(marketParams)) {
 		await updateMarket(market)
 	}

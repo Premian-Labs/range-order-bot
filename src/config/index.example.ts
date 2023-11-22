@@ -25,6 +25,11 @@ markets. Any markets that is not intended to be traded should be completely remo
 address (required): Using addresses.tokens.{INSERT TOKEN SYMBOL} will add the token address for the given market. If
 the market is not available, it will not populate.  Please see the README for available markets.
 
+spotPriceEstimate (optional): This is the spot price estimate for the given market.  Required for the bot to withdraw
+positions if the bot fails to fetch a spot price for a market.  This is NOT the oracle price, but rather a spot price
+estimate used for withdrawing positions.  This is NOT required if the bot is deployed in a market that has a working spot
+price oracle.
+
 maturities (required): All expirations to trade.  Invalid dates will be rejects and throw warnings while bot is
 running.  Any options that have expired or expire while the bot is running will automatically exercise/settle positions.
 
@@ -56,6 +61,7 @@ export const marketParams: MarketParams = {
 	WETH: {
 		address: addresses.tokens.WETH,
 		maturities: ['08DEC23', '15DEC23'],
+		spotPriceEstimate: 2000,
 		callStrikes: [2000],
 		putStrikes: [1900],
 		depositSize: 1,
@@ -65,6 +71,7 @@ export const marketParams: MarketParams = {
 	WBTC: {
 		address: addresses.tokens.WBTC,
 		maturities: ['08DEC23', '15DEC23'],
+		spotPriceEstimate: 36000,
 		callStrikes: [35000],
 		putStrikes: [35000],
 		depositSize: 0.05,

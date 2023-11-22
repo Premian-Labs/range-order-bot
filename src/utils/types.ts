@@ -19,6 +19,7 @@ export interface SerializedPosKey {
 export interface MarketParam {
 	address: string
 	maturities: string[]
+	spotPriceEstimate?: number // only used to withdraw if no spot price can be fetched
 	callStrikes?: number[] // if not passed, will be inferred from delta range
 	putStrikes?: number[] // if not passed, will be inferred from delta range
 	depositSize: number
