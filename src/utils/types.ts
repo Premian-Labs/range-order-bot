@@ -1,5 +1,10 @@
 import { OrderType } from '@premia/v3-sdk'
 
+export interface State {
+	lpRangeOrders: Position[]
+	optionParams: OptionParams[]
+}
+
 export interface PosKey {
 	owner: string
 	operator: string

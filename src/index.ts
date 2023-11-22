@@ -42,7 +42,7 @@ async function initializePositions(market: string) {
 			await hydrateStrikes(market, spotPriceEstimate)
 		}
 
-		// IMPORTANT: if user gave BOTH strikes, we can getExistingPositions to withdraw; don't need hydrateStrikes()
+		// IMPORTANT: if BOTH call/put strikes exist in marketParams, we can getExistingPositions to withdraw
 		if (marketParams[market].callStrikes && marketParams[market].putStrikes) {
 			log.warning('Attempting to withdraw existing positions...')
 

@@ -2,9 +2,15 @@
 	NOTE: Trade related settings may need to be tweaked from time to time depending on risk,
 	market conditions, and changes in available strikes/expirations
  */
-import { MarketParams, OptionParams, Position } from '../utils/types'
+import { MarketParams, State } from '../utils/types'
 import { addresses } from './constants'
 import { LogLevel } from '../utils/logs'
+
+// IMPORTANT: DO NOT TOUCH  (will hydrate while bot is running)
+export const state: State = {
+	lpRangeOrders: [],
+	optionParams: [],
+}
 
 /*
 	Log levels can be set to one of the following levels: DEBUG | INFO | WARN | ERROR.  Each level is inclusive
@@ -18,7 +24,7 @@ export const logLevel: LogLevel = 'INFO'
 	All these settings/thresholds can be found below marketParam configuration.
 
 	markets (required): There MUST be an IV oracle/surface for each market.  Please see the README for available
-	markets. Any markets that is not intended to be traded should be completely removed from marketParams.
+	markets. Any markets that are not intended to be traded should be completely removed from marketParams.
 
 	address (required): Using addresses.tokens.{INSERT TOKEN SYMBOL} will add the token address for the given market. If
 	the market is not available, it will not populate.  Please see the README for available markets.
@@ -76,16 +82,6 @@ export const marketParams: MarketParams = {
 		maxExposure: 0.1,
 		minOptionPrice: 0.003,
 	},
-}
-
-interface State {
-	lpRangeOrders: Position[]
-	optionParams: OptionParams[]
-}
-
-export const state: State = {
-	lpRangeOrders: [],
-	optionParams: [],
 }
 
 /*
@@ -173,6 +169,7 @@ export const autoDeploy = true
 	a pool if it is not available. If so, we can set the (max) fee associated with
 	deployment here.  Any excess is returned back. Value is in ETH.
  */
+// TODO: no longer needed
 export const maxDeploymentFee = '0.05'
 
 /*
