@@ -183,7 +183,9 @@ async function withdrawPosition(
 		log.info(`Pool expired. Settling position instead...`)
 
 		try {
-			const settlePositionTx = await executablePool.settlePosition(posKey)
+			const settlePositionTx = await executablePool.settlePosition(posKey, {
+				gasLimit: 2_000_000,
+			})
 			const confirm = await settlePositionTx.wait(1)
 
 			if (confirm?.status == 0) {
@@ -212,7 +214,7 @@ async function withdrawPosition(
 			poolBalance.toString(),
 			0,
 			parseEther('1'),
-			{ gasLimit: 1_400_000 },
+			{ gasLimit: 2_000_000 },
 		)
 
 		const confirm = await withdrawTx.wait(1)
