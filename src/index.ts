@@ -7,6 +7,7 @@ import {
 	refreshRate,
 	timeThresholdHrs,
 	maxCollateralApproved,
+	withdrawOnly,
 } from './config'
 import { state } from './state'
 import { addresses } from './config/constants'
@@ -79,7 +80,9 @@ async function initializePositions(market: string) {
 		await withdrawSettleLiquidity(market)
 	}
 
-	await deployLiquidity(market, curPrice)
+	if (!withdrawOnly) {
+		await deployLiquidity(market, curPrice)
+	}
 }
 
 async function maintainPositions(market: string) {
@@ -159,8 +162,11 @@ async function updateMarket(market: string) {
 async function runRangeOrderBot() {
 	log.app('Starting range order bot...')
 
-	// Set ALL collateral approvals (base & quote) to max before first deposit cycle
-	if (!initialized && maxCollateralApproved) {
+	if (withdrawOnly) {
+		log.app('Withdraw only mode is enabled, running withdraw process...')
+
+		// Set ALL collateral approvals (base & quote) to max before first deposit cycle
+	} else if (!initialized && maxCollateralApproved) {
 		log.info(`Setting approvals for collateral tokens prior to deposits`)
 
 		// Approvals for call base tokens
@@ -199,6 +205,15 @@ async function runRangeOrderBot() {
 async function main() {
 	while (true) {
 		await runRangeOrderBot()
+
+		if (withdrawOnly) {
+			log.app(
+				'Withdraw only mode is enabled, exiting after first cycle.. View your active positions at' +
+					' https://app.premia.finance/pools',
+			)
+
+			break
+		}
 
 		log.app(
 			'Cycle Completed, now idling until next refresh... View your active positions at' +

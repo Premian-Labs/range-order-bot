@@ -79,6 +79,12 @@ export const marketParams: MarketParams = {
 }
 
 /*
+	This is useful for situations where you want to withdraw all positions from
+	all markets without deploying new liquidity.
+ */
+export const withdrawOnly = false
+
+/*
 	If an option markets delta goes outside the min/max range it will automatically be excluded from
 	new liquidity deployment (this overrides the markets set in marketParams)
 
