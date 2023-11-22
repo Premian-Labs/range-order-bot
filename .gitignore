@@ -1,8 +1,12 @@
 .idea
 .env
+.env*
+!.env.example
+
 node_modules
 yarn.lock
 dist
-abi
+.npmrc
+
+src/config/index.ts
 typechain
-src/config/lpPositions.json
