@@ -52,7 +52,6 @@ export async function getUpdateOptionParams(
 		for (const existingPosition of uniqBy(state.lpRangeOrders, 'poolAddress')) {
 			const maturityTimestamp = createExpiration(existingPosition.maturity)
 			const ttm = getTTM(maturityTimestamp)
-			const notExp = ttm > 0
 
 			const [iv, option] = await getGreeksAndIV(
 				existingPosition.market,
@@ -63,17 +62,17 @@ export async function getUpdateOptionParams(
 			)
 
 			state.optionParams.push({
-				market,
+				market: existingPosition.market,
 				maturity: existingPosition.maturity,
 				isCall: existingPosition.isCall,
 				strike: existingPosition.strike,
 				spotPrice: curPrice,
 				ts,
-				iv: notExp ? iv : undefined,
-				optionPrice: notExp ? option?.price : undefined,
-				delta: notExp ? option?.delta : undefined,
-				theta: notExp ? option?.theta : undefined,
-				vega: notExp ? option?.vega : undefined,
+				iv: ttm > 0 ? iv : undefined,
+				optionPrice: ttm > 0 ? option?.price : undefined,
+				delta: ttm > 0 ? option?.delta : undefined,
+				theta: ttm > 0 ? option?.theta : undefined,
+				vega: ttm > 0 ? option?.vega : undefined,
 				cycleOrders: true, // set to establish position in first cycle
 				ivOracleFailure: iv === undefined,
 				spotOracleFailure: curPrice === undefined,
@@ -118,8 +117,6 @@ async function processCallsAndPuts(
 	// CALLS
 	await Promise.all(
 		marketParams[market].callStrikes!.map(async (strike) => {
-			const notExp = ttm > 0
-
 			const [iv, option] = await getGreeksAndIV(
 				market,
 				spotPrice,
@@ -151,11 +148,11 @@ async function processCallsAndPuts(
 						strike,
 						spotPrice,
 						ts,
-						iv: notExp ? iv : undefined,
-						optionPrice: notExp ? option?.price : undefined,
-						delta: notExp ? option?.delta : undefined,
-						theta: notExp ? option?.theta : undefined,
-						vega: notExp ? option?.vega : undefined,
+						iv: ttm > 0 ? iv : undefined,
+						optionPrice: ttm > 0 ? option?.price : undefined,
+						delta: ttm > 0 ? option?.delta : undefined,
+						theta: ttm > 0 ? option?.theta : undefined,
+						vega: ttm > 0 ? option?.vega : undefined,
 						cycleOrders: true, // set to establish position in first cycle
 						ivOracleFailure: iv === undefined,
 						spotOracleFailure: spotPrice === undefined,
@@ -210,11 +207,11 @@ async function processCallsAndPuts(
 						strike,
 						spotPrice,
 						ts,
-						iv: notExp ? iv : undefined,
-						optionPrice: notExp ? option?.price : undefined,
-						delta: notExp ? option?.delta : undefined,
-						theta: notExp ? option?.theta : undefined,
-						vega: notExp ? option?.vega : undefined,
+						iv: ttm > 0 ? iv : undefined,
+						optionPrice: ttm > 0 ? option?.price : undefined,
+						delta: ttm > 0 ? option?.delta : undefined,
+						theta: ttm > 0 ? option?.theta : undefined,
+						vega: ttm > 0 ? option?.vega : undefined,
 						cycleOrders: true, // set to establish position in first cycle
 						ivOracleFailure: iv === undefined,
 						spotOracleFailure: spotPrice === undefined,
