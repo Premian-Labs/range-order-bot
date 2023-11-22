@@ -89,7 +89,7 @@ export async function processStrikes(
 	const filteredOptionParams = state.optionParams.filter((option) => {
 		return (
 			option.market === market &&
-			option.type === (isCall ? 'C' : 'P') &&
+			option.isCall === isCall &&
 			option.maturity === maturityString
 		)
 	})
@@ -108,7 +108,9 @@ export async function processStrikes(
 		// Skip the deposit if range order is not due for a cycle update (we never withdrew)
 		if (!op.cycleOrders) {
 			log.debug(
-				`${op.market}-${op.maturity}-${op.strike}-${op.type} did not breach update threshold...checking next market`,
+				`${op.market}-${op.maturity}-${op.strike}-${
+					op.isCall ? 'C' : 'P'
+				} did not breach update threshold...checking next market`,
 			)
 			continue
 		}
@@ -119,14 +121,18 @@ export async function processStrikes(
 
 		if (maxDeltaThreshold || minDeltaThreshold) {
 			log.warning(
-				`Skipping ${op.market}-${op.maturity}-${op.strike}-${op.type}'}`,
+				`Skipping ${op.market}-${op.maturity}-${op.strike}-${
+					op.isCall ? 'C' : 'P'
+				}'}`,
 			)
 
 			log.warning(`Option out of delta range. Delta: ${op.delta}`)
 			continue
 		}
 
-		log.info(`Depositing for ${op.maturity}-${op.strike}-${op.type}`)
+		log.info(
+			`Depositing for ${op.maturity}-${op.strike}-${op.isCall ? 'C' : 'P'}`,
+		)
 
 		// NOTE: if null, we don't process strike for deposit
 		const fetchedPoolInfo = await fetchOrDeployPool(
@@ -233,7 +239,7 @@ export async function processStrikes(
 			(option) =>
 				option.market === op.market &&
 				option.maturity === op.maturity &&
-				option.type === (isCall ? 'C' : 'P') &&
+				option.isCall === isCall &&
 				option.strike === op.strike,
 		)
 

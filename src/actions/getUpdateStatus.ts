@@ -65,7 +65,7 @@ export async function getUpdateOptionParams(
 			state.optionParams.push({
 				market,
 				maturity: existingPosition.maturity,
-				type: existingPosition.isCall ? 'C' : 'P',
+				isCall: existingPosition.isCall,
 				strike: existingPosition.strike,
 				spotPrice: curPrice,
 				ts,
@@ -107,6 +107,14 @@ async function processCallsAndPuts(
 ) {
 	// NOTE: we break up by call/put strikes as they may not be the same if user populated
 
+	if (!marketParams[market].callStrikes) {
+		throw new Error(`No call strikes for ${market}`)
+	}
+
+	if (!marketParams[market].putStrikes) {
+		throw new Error(`No call strikes for ${market}`)
+	}
+
 	// CALLS
 	await Promise.all(
 		marketParams[market].callStrikes!.map(async (strike) => {
@@ -132,14 +140,14 @@ async function processCallsAndPuts(
 						option.market === market &&
 						option.strike === strike &&
 						option.maturity === maturityString &&
-						option.type === 'C',
+						option.isCall,
 				)
 
 				if (!duplicated) {
 					state.optionParams.push({
 						market,
 						maturity: maturityString,
-						type: 'C',
+						isCall: true,
 						strike,
 						spotPrice,
 						ts,
@@ -192,13 +200,13 @@ async function processCallsAndPuts(
 						option.market === market &&
 						option.strike === strike &&
 						option.maturity === maturityString &&
-						option.type === 'P',
+						!option.isCall,
 				)
 				if (!duplicated) {
 					state.optionParams.push({
 						market,
 						maturity: maturityString,
-						type: 'P',
+						isCall: false,
 						strike,
 						spotPrice,
 						ts,
@@ -302,7 +310,7 @@ function checkForUpdate(
 		(option) =>
 			option.market === market &&
 			option.maturity === maturityString &&
-			option.type === (isCall ? 'C' : 'P') &&
+			option.isCall === isCall &&
 			option.strike === strike,
 	)
 

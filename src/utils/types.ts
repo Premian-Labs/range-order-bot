@@ -43,7 +43,7 @@ export interface Position {
 export interface OptionParams {
 	market: string //static
 	maturity: string //static
-	type: 'C' | 'P' //static
+	isCall: boolean //static
 	strike: number //static
 	spotPrice: number | undefined
 	ts: number

@@ -139,7 +139,7 @@ async function checkWithdrawStatus(lpRangeOrder: Position) {
 		(option) =>
 			option.market === lpRangeOrder.market &&
 			option.maturity === lpRangeOrder.maturity &&
-			option.type === (lpRangeOrder.isCall ? 'C' : 'P') &&
+			option.isCall === lpRangeOrder.isCall &&
 			option.strike === lpRangeOrder.strike,
 	)
 

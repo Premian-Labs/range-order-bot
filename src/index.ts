@@ -1,8 +1,6 @@
-// noinspection InfiniteLoopJS
-
 import moment from 'moment'
 import { MaxUint256 } from 'ethers'
-import { withdrawSettleLiquidity } from './actions/withdrawPools'
+
 import {
 	marketParams,
 	spotMoveThreshold,
