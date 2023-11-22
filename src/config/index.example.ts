@@ -91,9 +91,14 @@ export const state: State = {
 /*
 	If an option markets delta goes outside the min/max range it will automatically be excluded from
 	new liquidity deployment (this overrides the markets set in marketParams)
+
+	Minimum: 0
+	Maximum: 1
+
+	NOTE: minDelta MUST be less than maxDelta
  */
-export const minDelta = 0.1 // .15 recommended
-export const maxDelta = 0.9 // .6 recommended
+export const minDelta = 0.15 // .15 recommended
+export const maxDelta = 0.6 // .6 recommended
 
 /*
 	If an option market falls below this threshold, it will automatically be excluded from new
