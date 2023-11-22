@@ -7,8 +7,8 @@ import {
 	refreshRate,
 	timeThresholdHrs,
 	maxCollateralApproved,
-	state,
 } from './config'
+import { state } from './state'
 import { addresses } from './config/constants'
 import { premia } from './config/contracts'
 import { log } from './utils/logs'

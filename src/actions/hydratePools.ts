@@ -12,7 +12,6 @@ import {
 	minDTE,
 	rangeWidthMultiplier,
 	marketParams,
-	state,
 } from '../config'
 import {
 	premia,
@@ -21,6 +20,7 @@ import {
 	botMultiCallProvider,
 } from '../config/contracts'
 import { lpAddress, addresses } from '../config/constants'
+import { state } from '../state'
 import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
 import { setApproval } from '../utils/tokens'
 import { PosKey } from '../utils/types'

@@ -8,7 +8,7 @@ import { PosKey, Position } from '../utils/types'
 import { botMultiCallProvider, premia } from '../config/contracts'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
-import { state } from '../config'
+import { state } from '../state'
 
 // NOTE: This will only withdraw positions in state.lpRangeOrders
 export async function withdrawSettleLiquidity(market: string) {
