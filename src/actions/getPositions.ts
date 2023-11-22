@@ -34,7 +34,7 @@ export async function getExistingPositions(market: string) {
 		)
 
 		log.info(`Finished getting existing positions!`)
-		log.info(
+		log.debug(
 			`Current LP Positions: ${JSON.stringify(state.lpRangeOrders, null, 4)}`,
 		)
 	} catch (err) {

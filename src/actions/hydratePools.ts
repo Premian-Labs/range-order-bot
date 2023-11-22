@@ -47,14 +47,14 @@ export async function deployLiquidity(market: string, spotPrice: number) {
 		}
 	} catch (err) {
 		log.error(`Error deploying liquidity: ${err}`)
-		log.info(
+		log.debug(
 			`Current LP Positions: ${JSON.stringify(state.lpRangeOrders, null, 4)}`,
 		)
 		return
 	}
 
 	log.info(`All Positions Successfully Processed for ${market}!`)
-	log.info(
+	log.debug(
 		`Current LP Positions: ${JSON.stringify(state.lpRangeOrders, null, 4)}`,
 	)
 }
