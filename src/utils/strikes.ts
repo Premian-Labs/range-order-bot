@@ -1,85 +1,38 @@
-import { MarketParams } from '../types'
-import { formatEther, parseEther } from 'ethers'
-import { productionTokenAddr } from '../constants'
-import { maxDelta, minDelta, riskFreeRate } from '../config'
-import { BlackScholes, Option } from '@uqee/black-scholes'
-import { createExpiration, getTTM } from '../utils/dates'
-import { premia, ivOracle } from '../contracts'
-import { log } from '../utils/logs'
+export function getSurroundingStrikes(spotPrice: number, maxProportion = 2) {
+	const minStrike = spotPrice / maxProportion
+	const maxStrike = spotPrice * maxProportion
 
-const blackScholes: BlackScholes = new BlackScholes()
+	const intervalAtMinStrike = getInterval(minStrike)
+	const intervalAtMaxStrike = getInterval(maxStrike)
+	const properMin = roundUpTo(minStrike, intervalAtMinStrike)
+	const properMax = roundUpTo(maxStrike, intervalAtMaxStrike)
 
-export async function getValidStrikes(
-	market: string,
-	spotPrice: number,
-	marketParams: MarketParams,
-	maturityString: string,
-	isCall: boolean,
-) {
-	const strikes = isCall
-		? marketParams[market].callStrikes
-		: marketParams[market].putStrikes
+	const strikes = []
+	let increment = getInterval(minStrike)
+	for (let i = properMin; i <= properMax; i += increment) {
+		increment = getInterval(i)
+		strikes.push(truncateFloat(i, increment))
+	}
 
-	const suggestedStrikes =
-		strikes ??
-		premia.options
-			.getSuggestedStrikes(parseEther(spotPrice.toString()))
-			.map((strike) => Number(formatEther(strike)))
+	return strikes
+}
 
-	const validStrikes: {
-		strike: number
-		option: Option
-	}[] = []
+// Fixes JS float imprecision error
+function truncateFloat(input: number, increment: number): number {
+	const orderOfIncrement = Math.floor(Math.log10(increment))
+	if (orderOfIncrement < 0) {
+		return Number(input.toFixed(-orderOfIncrement))
+	} else {
+		return Number(input.toFixed(0))
+	}
+}
 
-	const maturityTimestamp = createExpiration(maturityString)
-	const ttm = getTTM(maturityTimestamp)
+function roundUpTo(initial: number, rounding: number): number {
+	return Math.ceil(initial / rounding) * rounding
+}
 
-	await Promise.all(
-		suggestedStrikes.map(async (strike) => {
-			const iv = await ivOracle[
-				'getVolatility(address,uint256,uint256,uint256)'
-			](
-				productionTokenAddr[market], // NOTE: we use production addresses only
-				parseEther(spotPrice.toString()),
-				parseEther(strike.toString()),
-				parseEther(
-					ttm.toLocaleString(undefined, { maximumFractionDigits: 18 }),
-				),
-			)
-
-			const option: Option = blackScholes.option({
-				rate: riskFreeRate,
-				sigma: parseFloat(formatEther(iv)),
-				strike,
-				time: ttm,
-				type: isCall ? 'call' : 'put',
-				underlying: spotPrice,
-			})
-
-			const maxDeltaThreshold = Math.abs(option.delta) > maxDelta
-			const minDeltaThreshold = Math.abs(option.delta) < minDelta
-
-			if (strikes && (maxDeltaThreshold || minDeltaThreshold)) {
-				log.warning(
-					`Skipping ${market} ${maturityString} ${isCall ? 'Calls' : 'Puts'}`,
-				)
-
-				log.warning(`Option out of delta range. Delta: ${option.delta}`)
-				return
-			} else if (maxDeltaThreshold || minDeltaThreshold) {
-				return
-			}
-
-			log.debug(
-				`Adding valid strike: ${strike} with delta: ${option.delta} (${minDelta} <-> ${maxDelta})`,
-			)
-
-			validStrikes.push({
-				strike,
-				option,
-			})
-		}),
-	)
-
-	return validStrikes
+function getInterval(price: number): number {
+	const orderOfTens = Math.floor(Math.log10(price))
+	const base = price / 10 ** orderOfTens
+	return base < 5 ? 10 ** (orderOfTens - 1) : 5 * 10 ** (orderOfTens - 1)
 }

@@ -1,3 +1,5 @@
+// noinspection JSUnusedGlobalSymbols
+
 import { logLevel } from '../config'
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
@@ -13,6 +15,7 @@ export class LogManager {
 
 	private currentLogLevel: number
 
+	//log level set via config file
 	constructor(_logLevel: LogLevel = logLevel) {
 		this.currentLogLevel = LogManager.LogLevel[_logLevel].value
 	}
