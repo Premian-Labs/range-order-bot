@@ -2,6 +2,7 @@
 	NOTE: no variables here need to be directly touched. All values are determined by ENV
 	variables and constants that exist in the repo.
  */
+
 import dotenv from 'dotenv'
 import arbAddresses from '@premia/v3-abi/deployment/arbitrum.json'
 import arbGoerliAddresses from '@premia/v3-abi/deployment/arbitrumGoerli.json'
