@@ -24,7 +24,7 @@ export const logLevel: LogLevel = 'INFO'
 	All these settings/thresholds can be found below marketParam configuration.
 
 	markets (required): There MUST be an IV oracle/surface for each market.  Please see the README for available
-	markets. Any markets that is not intended to be traded should be completely removed from marketParams.
+	markets. Any markets that are not intended to be traded should be completely removed from marketParams.
 
 	address (required): Using addresses.tokens.{INSERT TOKEN SYMBOL} will add the token address for the given market. If
 	the market is not available, it will not populate.  Please see the README for available markets.
