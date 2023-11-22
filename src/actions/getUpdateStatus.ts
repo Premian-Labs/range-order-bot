@@ -1,28 +1,29 @@
-import { marketParams, riskFreeRate, defaultSpread, state } from '../config'
-import { createExpiration, getTTM } from '../utils/dates'
 import { BlackScholes, Option } from '@uqee/black-scholes'
-import { ivOracle } from '../config/contracts'
-import { productionTokenAddr } from '../config/constants'
 import { formatEther, parseEther } from 'ethers'
+import uniqBy from 'lodash.uniqby'
+
+import { marketParams, riskFreeRate, defaultSpread, state } from '../config'
+import { productionTokenAddr } from '../config/constants'
+import { ivOracle } from '../config/contracts'
+import { createExpiration, getTTM } from '../utils/dates'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
-import uniqBy from 'lodash.uniqby'
 
 const blackScholes: BlackScholes = new BlackScholes()
 
 /*
-IMPORTANT: state.lpRangeOrders will hold all EXISTING and NEW positions. OptionParams should ALWAYS have
-a record of new and existing positions, however, it's possible for state.optionParams to have MORE options than
-actual positions in state.lpRangeOrders due to filters such at DTE and Delta.
+	IMPORTANT: state.lpRangeOrders will hold all EXISTING and NEW positions. OptionParams should ALWAYS have
+	a record of new and existing positions, however, it's possible for state.optionParams to have MORE options than
+	actual positions in state.lpRangeOrders due to filters such at DTE and Delta.
 
-CHEATSHEET:
-cycleOrders = true  =========> cycle market (withdraw & deposit)
-cycleOrders = false  ===========> tradable but not ready to cycle market
-(ivOracleFailure = true OR spotOracleFailure = true) ===============> withdraw only
+	CHEATSHEET:
+	cycleOrders = true  =========> cycle market (withdraw & deposit)
+	cycleOrders = false  ===========> tradable but not ready to cycle market
+	(ivOracleFailure = true OR spotOracleFailure = true) ===============> withdraw only
 
-STATE CHANGES:
-cycleOrders -> updated BEFORE withdraws (in getUpdateOptionParams) and AFTER a deposit
-oracleFailure -> updated BEFORE withdrawals/deposits (in getUpdateOptionParams)
+	STATE CHANGES:
+	cycleOrders -> updated BEFORE withdraws (in getUpdateOptionParams) and AFTER a deposit
+	oracleFailure -> updated BEFORE withdrawals/deposits (in getUpdateOptionParams)
  */
 
 // IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
@@ -38,9 +39,9 @@ export async function getUpdateOptionParams(
 	const initialized = filteredOptionParams.length > 0
 
 	/*
-	INITIALIZATION CASE : We need to ensure existing positions are IGNORED if a user specifies this by setting
-	withdrawExistingPositions to false. All existing positions need to be hydrated with proper
-	spot/option data. This should only run once.
+		INITIALIZATION CASE: We need to ensure existing positions are IGNORED if a user specifies this by setting
+		withdrawExistingPositions to false. All existing positions need to be hydrated with proper
+		spot/option data. This should only run once.
 	 */
 	log.debug(
 		`Existing Number of Range Orders for ${market}: ${state.lpRangeOrders.length}`,
@@ -306,7 +307,7 @@ function checkForUpdate(
 	)
 
 	/*
-	NOTE: oracle failure cases, if option hasn't expired and iv is undefined, so should option (price & greeks).
+		NOTE: oracle failure cases, if option hasn't expired and iv is undefined, so should option (price & greeks).
 	 */
 	if ((iv === undefined || spotPrice === undefined) && ttm > 0) {
 		log.warning(
@@ -344,12 +345,12 @@ function checkForUpdate(
 		: 0
 
 	/*
-	NOTE: if option requires withdraw/reDeposit then update all option related values
-	IMPORTANT: this is to initiate a withdrawal/deposit cycle if EITHER an existing position
-	moved or, we previously withdrew due to an oracle failure and now its back online.
+		NOTE: if option requires withdraw/reDeposit then update all option related values
+		IMPORTANT: this is to initiate a withdrawal/deposit cycle if EITHER an existing position
+		moved or, we previously withdrew due to an oracle failure and now its back online.
 	 */
 	if (optionPricePercChange > defaultSpread || prevOptionPrice === undefined) {
-		//NOTE: these are all non-static values in state.optionParams
+		// NOTE: these are all non-static values in state.optionParams
 		state.optionParams[optionIndex].spotPrice = spotPrice
 		state.optionParams[optionIndex].ts = ts
 		state.optionParams[optionIndex].iv = iv

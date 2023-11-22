@@ -1,8 +1,6 @@
-// noinspection ExceptionCaughtLocallyJS
-
-import { PosKey } from '../utils/types'
 import { formatEther, parseEther, formatUnits, parseUnits } from 'ethers'
-import { lpAddress, addresses } from '../config/constants'
+import { IPool, OrderType, PoolKey, TokenType } from '@premia/v3-sdk'
+
 import {
 	autoDeploy,
 	defaultSpread,
@@ -16,21 +14,22 @@ import {
 	marketParams,
 	state,
 } from '../config'
-import { IPool, OrderType, PoolKey, TokenType } from '@premia/v3-sdk'
-import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
-import { setApproval } from '../utils/tokens'
 import {
 	premia,
 	signerAddress,
 	poolFactory,
 	botMultiCallProvider,
 } from '../config/contracts'
+import { lpAddress, addresses } from '../config/constants'
+import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
+import { setApproval } from '../utils/tokens'
+import { PosKey } from '../utils/types'
+import { log } from '../utils/logs'
+import { delay } from '../utils/time'
 import {
 	getCollateralApprovalAmount,
 	getValidRangeWidth,
 } from '../utils/rangeOrders'
-import { log } from '../utils/logs'
-import { delay } from '../utils/time'
 
 export async function deployLiquidity(market: string, spotPrice: number) {
 	log.app(`Deploying liquidity for ${market}`)
@@ -206,8 +205,8 @@ export async function processStrikes(
 		)
 
 		/*
-		NOTE: once the deposits are queued up, we need to do quality control checks to make sure that
-		we are not breaching any limits (ie max exposure or low account collateral balance)
+			NOTE: once the deposits are queued up, we need to do quality control checks to make sure that
+			we are not breaching any limits (ie max exposure or low account collateral balance)
 		*/
 
 		await processDeposits(
@@ -225,8 +224,11 @@ export async function processStrikes(
 			leftSideCollateralAmount,
 		)
 
-		// NOTE: Find option using market/maturity/type/strike (should only be one)
-		// IMPORTANT: we use the unfiltered state.optionParams
+		/* 
+			NOTE: Find option using market/maturity/type/strike (should only be one)
+		
+			IMPORTANT: We use the unfiltered state.optionParams
+		*/
 		const optionIndex = state.optionParams.findIndex(
 			(option) =>
 				option.market === op.market &&
@@ -235,7 +237,7 @@ export async function processStrikes(
 				option.strike === op.strike,
 		)
 
-		// IMPORTANT: -1 is returned if lpRangeOrder is not in state.optionParams.  If this is the case there is a bug
+		// IMPORTANT: -1 is returned if lpRangeOrder is not in state.optionParams. If this is the case there is a bug
 		if (optionIndex == -1) {
 			throw new Error(
 				'lpRangeOrder was not traceable in state.optionParams. Please contact dev team',
@@ -267,9 +269,9 @@ async function fetchOrDeployPool(
 
 	let poolAddress: string
 	let isDeployed: boolean
-	try{
-		[poolAddress, isDeployed] = await poolFactory.getPoolAddress(poolKey)
-	}catch(e){
+	try {
+		;[poolAddress, isDeployed] = await poolFactory.getPoolAddress(poolKey)
+	} catch (e) {
 		log.warning(
 			`${market} ${maturityString}-${strike}-${
 				isCall ? 'C' : 'P'
@@ -420,9 +422,12 @@ async function processDeposits(
 	const rightSideUsesOptions = rightSideCollateralAmount == 0
 	const leftSideUsesOptions = leftSideCollateralAmount == 0
 
-	// NOTE: we will still post single sided markets with options (close only quoting) so even if we have no
-	// collateral but at least one side can use options, we will still post that order.
-	// If BOTH orders require collateral and there is not enough for either: skip BOTH deposits
+	/* 
+		NOTE: We will still post single sided markets with options (close only quoting) so even if we have no
+			  collateral but at least one side can use options, we will still post that order.
+
+			  If BOTH orders require collateral and there is not enough for either: skip BOTH deposits.
+	*/
 	if (
 		!sufficientCollateral &&
 		leftSideCollateralAmount > 0 &&
@@ -589,7 +594,7 @@ async function prepareLeftSideOrder(
 			orderType: leftOrderType,
 		}
 
-		// NOTE: if using options for a LEFT side order, collateral amt is ZERO
+		// NOTE: if using options for a LEFT side order, collateral amount is ZERO
 		leftSideCollateralAmount = await getCollateralApprovalAmount(
 			market,
 			leftPosKey,
@@ -624,7 +629,7 @@ async function deployPool(
 	try {
 		const deploymentTx = await poolFactory.deployPool(poolKey, {
 			value: parseEther(maxDeploymentFee), // init fee excess refunded
-			gasLimit: 10000000, // fails to properly estimate gas limit
+			gasLimit: 10_000_000, // fails to properly estimate gas limit
 		})
 
 		const confirm = await deploymentTx.wait(1)
@@ -715,9 +720,9 @@ async function depositRangeOrderLiq(
 		)
 
 		/*
-		NOTE: below covers the cases in which we are doing a deposit, but it is with
-		collateral and not options. If it is with options, then we do not need any
-		approvals for options to be deposited.
+			NOTE: below covers the cases in which we are doing a deposit, but it is with
+			collateral and not options. If it is with options, then we do not need any
+			approvals for options to be deposited.
 		*/
 
 		const approvalRequired =
@@ -804,7 +809,7 @@ async function depositPosition(
 			0n,
 			parseEther('1'),
 			{
-				gasLimit: 10000000, // Fails to properly estimate gas limit
+				gasLimit: 10_000_000, // Fails to properly estimate gas limit
 			},
 		)
 

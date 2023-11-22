@@ -1,14 +1,13 @@
-// noinspection ExceptionCaughtLocallyJS
-
-import isEqual from 'lodash.isequal'
 import { IPool, OrderType, formatTokenId } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'
+import isEqual from 'lodash.isequal'
+import moment from 'moment/moment'
+
 import { lpAddress } from '../config/constants'
 import { PosKey, Position } from '../utils/types'
 import { botMultiCallProvider, premia } from '../config/contracts'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
-import moment from 'moment/moment'
 import { state } from '../config'
 
 // NOTE: This will only withdraw positions in state.lpRangeOrders
@@ -59,7 +58,7 @@ export async function withdrawSettleLiquidity(market: string) {
 			`Processing withdraw for: ${JSON.stringify(filteredRangeOrder, null, 4)}`,
 		)
 
-		//NOTE: Position type (filteredRangeOrder) uses SerializedPosKey type
+		// NOTE: Position type (filteredRangeOrder) uses SerializedPosKey type
 		const posKey: PosKey = {
 			owner: filteredRangeOrder.posKey.owner,
 			operator: filteredRangeOrder.posKey.operator,
@@ -82,7 +81,7 @@ export async function withdrawSettleLiquidity(market: string) {
 		)
 
 		/*
-		PoolSettings array => [ base, quote, oracleAdapter, strike, maturity, isCallPool ]
+			PoolSettings array => [ base, quote, oracleAdapter, strike, maturity, isCallPool ]
 		 */
 		const [poolSettings, poolBalance] = await Promise.all([
 			pool.getPoolSettings(),
@@ -213,7 +212,7 @@ async function withdrawPosition(
 			poolBalance.toString(),
 			0,
 			parseEther('1'),
-			{ gasLimit: 1400000 },
+			{ gasLimit: 1_400_000 },
 		)
 
 		const confirm = await withdrawTx.wait(1)

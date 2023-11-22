@@ -1,18 +1,19 @@
 import { IPool, PoolKey } from '@premia/v3-sdk'
 import { formatEther, parseEther } from 'ethers'
-import { state, marketParams } from '../config'
+import moment from 'moment'
+
+import { botMultiCallProvider, poolFactory, premia } from '../config/contracts'
 import { addresses, lpAddress } from '../config/constants'
+import { state, marketParams } from '../config'
+import { parseTokenId } from '../utils/tokens'
 import { Position } from '../utils/types'
+import { log } from '../utils/logs'
 import {
 	createExpiration,
 	getLast30Days,
 	getTTM,
 	nextYearOfMaturities,
 } from '../utils/dates'
-import { botMultiCallProvider, poolFactory, premia } from '../config/contracts'
-import { parseTokenId } from '../utils/tokens'
-import { log } from '../utils/logs'
-import moment from 'moment'
 
 // NOTE: this will find ALL range orders by user (not just from the bot)
 // IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
@@ -121,7 +122,7 @@ async function processStrike(
 		const expired = maturityTimestamp < moment.utc().unix()
 		const outOfRange = 1 < getTTM(maturityTimestamp)
 		if (expired || outOfRange) {
-			//No need to attempt to get poolAddress
+			// No need to attempt to get poolAddress
 			return
 		} else {
 			log.debug(

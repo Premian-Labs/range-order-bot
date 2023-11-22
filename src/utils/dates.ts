@@ -1,4 +1,5 @@
 import moment from 'moment'
+
 import { SECONDS_IN_YEAR } from '../config/constants'
 
 export function getTTM(maturityTimestamp: number): number {

@@ -1,5 +1,3 @@
-// noinspection ExceptionCaughtLocallyJS
-
 import {
 	ISolidStateERC20,
 	MIN_TICK_DISTANCE,
@@ -7,10 +5,11 @@ import {
 	TokenIdParams,
 } from '@premia/v3-sdk'
 import { MaxUint256, getAddress } from 'ethers'
+
+import { signerAddress } from '../config/contracts'
 import { addresses } from '../config/constants'
 import { delay } from './time'
 import { log } from './logs'
-import { signerAddress } from '../config/contracts'
 
 export async function setApproval(
 	collateralValue: bigint,
