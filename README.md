@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="img/premia.png" alt=''>
+  <img src=".github/img/premia.png" alt=''>
 </div>
 
 ## What is Premia?
@@ -36,7 +36,7 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 <div align="center">
 
 | Token Symbol | Arbitrum Goerli (Development) | Arbitrum (Production) |
-|:------------:|:-----------------------------:|:---------------------:|
+| :----------: | :---------------------------: | :-------------------: |
 |     WETH     |      :heavy_check_mark:       |  :heavy_check_mark:   |
 |     WBTC     |      :heavy_check_mark:       |  :heavy_check_mark:   |
 |     ARB      |                               |  :heavy_check_mark:   |
@@ -60,7 +60,7 @@ is familiar with how range orders work, and the risks associated with owning opt
 2. While in the root directory, run `yarn install` to install package dependencies.
 3. Create a `.env` file using the same format at the example and add necessary information. Note that ENV should
    either be `development` or `production`.
-4. Navigate to `src/config/index.example.ts` and review each and every setting. Create a new file called 
+4. Navigate to `src/config/index.example.ts` and review each and every setting. Create a new file called
    `index.ts` in the same config directory to populate custom settings by copy-pasting from example file. Instructions & descriptions of settings are provided in the example file.
 5. Run `yarn start` in the command line to run the range order bot.
 
@@ -70,6 +70,6 @@ is familiar with how range orders work, and the risks associated with owning opt
 - [x] convert timeThresholdMin into hours
 - [x] ignore liquidity settings to avoid loss of trade setting on repo updates
 - [ ] add delta and theta based lp range updates for more efficient updating
-- [ ] remove npm token requirement on SDK 
+- [ ] remove npm token requirement on SDK
 - [ ] add sell-only or buy-only exposure settings in marketParams to provide one-sided liq
 - [ ] pull quotes if there is an iv oracle chronic failure
