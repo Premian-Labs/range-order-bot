@@ -236,7 +236,7 @@ async function processCallsAndPuts(
 	)
 }
 
-async function getGreeksAndIV(
+export async function getGreeksAndIV(
 	market: string,
 	spotPrice: number | undefined,
 	strike: number,

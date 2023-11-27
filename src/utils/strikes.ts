@@ -1,3 +1,12 @@
+import { BlackScholes, Option } from '@uqee/black-scholes'
+import { formatEther, parseEther } from 'ethers'
+
+import { minDelta, maxDelta, riskFreeRate } from '../config'
+import { ivOracle } from '../config/contracts'
+import { productionTokenAddr } from '../config/constants'
+
+const blackScholes: BlackScholes = new BlackScholes()
+
 export function getSurroundingStrikes(spotPrice: number, maxProportion = 2) {
 	const minStrike = spotPrice / maxProportion
 	const maxStrike = spotPrice * maxProportion
@@ -15,6 +24,50 @@ export function getSurroundingStrikes(spotPrice: number, maxProportion = 2) {
 	}
 
 	return strikes
+}
+
+export async function filterSurroundingStrikes(
+	market: string,
+	ttm: number,
+	spotPrice: number,
+	isCall: boolean,
+	strikes: number[],
+) {
+	return await Promise.all(
+		strikes.filter(async (strike) => {
+			let iv: number
+			try {
+				iv = parseFloat(
+					formatEther(
+						await ivOracle['getVolatility(address,uint256,uint256,uint256)'](
+							productionTokenAddr[market], // NOTE: we use production addresses only
+							parseEther(spotPrice.toString()),
+							parseEther(strike.toString()),
+							parseEther(
+								ttm.toLocaleString(undefined, { maximumFractionDigits: 18 }),
+							),
+						),
+					),
+				)
+			} catch (err) {
+				// NOTE: if we fail to get iv, just keep the strike (conservative method)
+				return true
+			}
+
+			const option: Option = blackScholes.option({
+				rate: riskFreeRate,
+				sigma: iv,
+				strike,
+				time: ttm,
+				type: isCall ? 'call' : 'put',
+				underlying: spotPrice,
+			})
+
+			const optionDelta = isCall ? option.delta : Math.abs(option.delta)
+
+			return minDelta < optionDelta && maxDelta > optionDelta
+		}),
+	)
 }
 
 // Fixes JS float imprecision error
