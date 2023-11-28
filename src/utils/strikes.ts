@@ -1,5 +1,4 @@
 import { minDelta, maxDelta } from '../config'
-import { log } from './logs'
 import { getGreeksAndIV } from './option'
 
 export function getSurroundingStrikes(spotPrice: number, maxProportion = 2) {
