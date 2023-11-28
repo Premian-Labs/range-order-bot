@@ -1,11 +1,6 @@
-import { BlackScholes, Option } from '@uqee/black-scholes'
-import { formatEther, parseEther } from 'ethers'
-
-import { minDelta, maxDelta, riskFreeRate } from '../config'
-import { ivOracle } from '../config/contracts'
-import { productionTokenAddr } from '../config/constants'
-
-const blackScholes: BlackScholes = new BlackScholes()
+import { minDelta, maxDelta } from '../config'
+import { log } from './logs'
+import { getGreeksAndIV } from './option'
 
 export function getSurroundingStrikes(spotPrice: number, maxProportion = 2) {
 	const minStrike = spotPrice / maxProportion
@@ -35,36 +30,20 @@ export async function filterSurroundingStrikes(
 ) {
 	return await Promise.all(
 		strikes.filter(async (strike) => {
-			let iv: number
-			try {
-				iv = parseFloat(
-					formatEther(
-						await ivOracle['getVolatility(address,uint256,uint256,uint256)'](
-							productionTokenAddr[market], // NOTE: we use production addresses only
-							parseEther(spotPrice.toString()),
-							parseEther(strike.toString()),
-							parseEther(
-								ttm.toLocaleString(undefined, { maximumFractionDigits: 18 }),
-							),
-						),
-					),
-				)
-			} catch (err) {
-				// NOTE: if we fail to get iv, just keep the strike (conservative method)
-				return true
-			}
-
-			const option: Option = blackScholes.option({
-				rate: riskFreeRate,
-				sigma: iv,
+			// NOTE: Errors are caught and warned within getGreeksAndIV and
+			// 		 an array of undefineds is returned if any errors occur
+			const [_, option] = await getGreeksAndIV(
+				market,
+				spotPrice,
 				strike,
-				time: ttm,
-				type: isCall ? 'call' : 'put',
-				underlying: spotPrice,
-			})
+				ttm,
+				isCall,
+			)
+
+			// Conservatively keep strikes that fail to fetch a valid IV / Delta
+			if (!option) return true
 
 			const optionDelta = isCall ? option.delta : Math.abs(option.delta)
-
 			return minDelta < optionDelta && maxDelta > optionDelta
 		}),
 	)
