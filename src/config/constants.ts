@@ -8,15 +8,14 @@ import arbAddresses from '@premia/v3-abi/deployment/arbitrum.json'
 import arbGoerliAddresses from '@premia/v3-abi/deployment/arbitrumGoerli.json'
 
 dotenv.config()
-const { ENV, API_KEY_INFURA, LP_PKEY, LP_ADDRESS } = process.env
+const { ENV, TESTNET_RPC_URL, MAINNET_RPC_URL, LP_PKEY, LP_ADDRESS } =
+	process.env
 
-if (!ENV || !API_KEY_INFURA || !LP_ADDRESS || !LP_PKEY)
+if (!ENV || !LP_ADDRESS || !LP_PKEY || !MAINNET_RPC_URL || !TESTNET_RPC_URL)
 	throw new Error('Missing Env Variables')
 
-export const rpcUrl =
-	ENV === 'production'
-		? `https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}`
-		: `https://arbitrum-goerli.infura.io/v3/${API_KEY_INFURA}`
+// NOTE: we ensure we have the RPC URL, or we throw error (above)
+export const rpcUrl = ENV == 'production' ? MAINNET_RPC_URL : TESTNET_RPC_URL
 
 export const privateKey = LP_PKEY
 export const lpAddress = LP_ADDRESS
@@ -28,7 +27,7 @@ export const productionTokenAddr: Record<string, string> = arbAddresses.tokens
 export const volatilityOracle = arbAddresses.core.VolatilityOracleProxy.address
 
 // the iv oracle is only available on arbitrum mainnet
-export const volatilityOracleRpcUrl = `https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}`
+export const volatilityOracleRpcUrl = MAINNET_RPC_URL
 
 export const SECONDS_IN_YEAR = 365 * 24 * 60 * 60
 
