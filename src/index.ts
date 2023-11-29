@@ -10,8 +10,6 @@ import {
 	withdrawOnly,
 } from './config'
 import { state } from './config/state'
-import { addresses } from './config/constants'
-import { premia } from './config/contracts'
 import { log } from './utils/logs'
 import { delay } from './utils/time'
 import { getSpotPrice } from './utils/prices'
@@ -171,24 +169,12 @@ async function runRangeOrderBot() {
 
 		// Approvals for call base tokens
 		for (const market of Object.keys(marketParams)) {
-			const token = premia.contracts.getTokenContract(
-				marketParams[market].address,
-				premia.signer as any,
-			)
-
-			await setApproval(MaxUint256, token)
-
+			await setApproval(market, MaxUint256)
 			log.info(`${market} approval set to MAX`)
 		}
 
 		// Approval for quote token (USDC only)
-		const token = premia.contracts.getTokenContract(
-			addresses.tokens.USDC,
-			premia.signer as any,
-		)
-
-		await setApproval(MaxUint256, token)
-
+		await setApproval('USDC', MaxUint256)
 		log.info(`USDC approval set to MAX`)
 	}
 

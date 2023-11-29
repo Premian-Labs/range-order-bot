@@ -1,21 +1,27 @@
 import {
-	ISolidStateERC20,
 	MIN_TICK_DISTANCE,
 	OrderType,
 	TokenIdParams,
 } from '@premia/v3-sdk'
 import { MaxUint256, getAddress } from 'ethers'
 
-import { signerAddress } from '../config/contracts'
+import {premia, signerAddress} from '../config/contracts'
 import { addresses } from '../config/constants'
 import { delay } from './time'
 import { log } from './logs'
+import {marketParams} from "../config";
 
 export async function setApproval(
+	market: string,
 	collateralValue: bigint,
-	token: ISolidStateERC20,
 	retry: boolean = true,
 ) {
+	const tokenAddress = market === 'USDC'? addresses.tokens.USDC : marketParams[market].address
+	const token = premia.contracts.getTokenContract(
+		tokenAddress,
+		premia.signer as any,
+	)
+
 	try {
 		const allowance = await token.allowance(
 			signerAddress,
@@ -45,7 +51,7 @@ export async function setApproval(
 	} catch (err) {
 		await delay(2000)
 		if (retry) {
-			return setApproval(collateralValue, token, false)
+			return setApproval(market, collateralValue, false)
 		} else {
 			log.error(
 				`Approval could not be set for ${await token.symbol()}! Try again or check provider and ETH balance...`,
