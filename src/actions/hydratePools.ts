@@ -429,9 +429,8 @@ async function processDeposits(
 
 	/* 
 		NOTE: We will still post single sided markets with options (close only quoting) so even if we have no
-			  collateral but at least one side can use options, we will still post that order.
-
-			  If BOTH orders require collateral and there is not enough for either: skip BOTH deposits.
+		collateral but at least one side can use options, we will still post that order. If BOTH orders require
+		collateral and there is not enough for either: skip BOTH deposits.
 	*/
 	if (
 		!sufficientCollateral &&
@@ -439,11 +438,24 @@ async function processDeposits(
 		rightSideCollateralAmount > 0
 	) {
 		log.warning(
-			`INSUFFICIENT COLLATERAL BALANCE. No collateral based range deposits made for 
-		${market} 
-		${maturityString} 
-		${strike} 
-		${isCall ? 'Call' : 'Put'}`,
+			`INSUFFICIENT COLLATERAL BALANCE. No collateral based range deposits made for ${market}-${maturityString}-${strike}-${
+				isCall ? 'Call' : 'Put'
+			}`,
+		)
+		return
+	}
+
+	/*
+		NOTE: if minOptionPrice is triggered, leftPosKey is NULL. If we do not have
+		sufficient collateral to post the right side order, we need to display a warning.
+		GOTCHA: when minOptionPrice is triggered, leftSideCollateralAmount is ZERO, this has two interpretations
+		which is why this additional sequence is needed (it means either no left side order or we are using options)
+	 */
+	if (!sufficientCollateral && !leftPosKey && rightSideCollateralAmount > 0) {
+		log.warning(
+			`INSUFFICIENT COLLATERAL BALANCE FOR RIGHT SIDE ORDER. No deposit made for ${market}-${maturityString}-${strike}-${
+				isCall ? 'Call' : 'Put'
+			}`,
 		)
 		return
 	}
