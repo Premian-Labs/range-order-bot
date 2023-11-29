@@ -14,6 +14,7 @@ export async function getCollateralApprovalAmount(
 	strike: number,
 ) {
 	const collateralName = isCallPool ? market : 'USDC'
+	const baseDecimal = market === `WBTC` ? 8 : 18
 
 	// Left side order using (collateral only)
 	if (posKey.orderType == OrderType.LONG_COLLATERAL && isLeftSide) {
@@ -22,7 +23,6 @@ export async function getCollateralApprovalAmount(
 		const upperTick = parseFloat(formatEther(posKey.upper))
 		const averagePrice = (lowerTick + upperTick) / 2
 
-		const baseDecimal = market === `WBTC` ? 8 : 18
 		const collateralValue = Number(
 			isCallPool
 				? (depositSize * averagePrice).toFixed(baseDecimal)
@@ -37,7 +37,9 @@ export async function getCollateralApprovalAmount(
 		// Right side order using (collateral only)
 	} else if (posKey.orderType == OrderType.COLLATERAL_SHORT && !isLeftSide) {
 		const collateralValue = Number(
-			(isCallPool ? depositSize : depositSize * strike).toFixed(18),
+			isCallPool
+				? depositSize.toFixed(baseDecimal)
+				: (depositSize * strike).toFixed(6),
 		)
 
 		log.info(
