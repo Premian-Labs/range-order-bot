@@ -21,7 +21,7 @@ import {
 import { lpAddress, addresses } from '../config/constants'
 import { state } from '../config/state'
 import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
-import { setApproval } from '../utils/tokens'
+import { setApproval } from './setApprovals'
 import { PosKey } from '../utils/types'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
@@ -727,8 +727,8 @@ async function depositRangeOrderLiq(
 			(posKey.orderType == OrderType.COLLATERAL_SHORT && !isLeftSide)
 
 		if (approvalRequired && !maxCollateralApproved) {
-			const collateralTokenSymbol = isCallPool? market: 'USDC'
-			await setApproval(collateralTokenSymbol, collateralValue )
+			const collateralTokenSymbol = isCallPool ? market : 'USDC'
+			await setApproval(collateralTokenSymbol, collateralValue)
 		}
 
 		log.info(
