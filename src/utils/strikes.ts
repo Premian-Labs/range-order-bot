@@ -1,3 +1,6 @@
+import { minDelta, maxDelta } from '../config'
+import { getGreeksAndIV } from './option'
+
 export function getSurroundingStrikes(spotPrice: number, maxProportion = 2) {
 	const minStrike = spotPrice / maxProportion
 	const maxStrike = spotPrice * maxProportion
@@ -15,6 +18,34 @@ export function getSurroundingStrikes(spotPrice: number, maxProportion = 2) {
 	}
 
 	return strikes
+}
+
+export async function filterSurroundingStrikes(
+	market: string,
+	ttm: number,
+	spotPrice: number,
+	isCall: boolean,
+	strikes: number[],
+) {
+	return await Promise.all(
+		strikes.filter(async (strike) => {
+			// NOTE: Errors are caught and warned within getGreeksAndIV and
+			// 		 an array of undefineds is returned if any errors occur
+			const [_, option] = await getGreeksAndIV(
+				market,
+				spotPrice,
+				strike,
+				ttm,
+				isCall,
+			)
+
+			// Conservatively keep strikes that fail to fetch a valid IV / Delta
+			if (!option) return true
+
+			const optionDelta = isCall ? option.delta : Math.abs(option.delta)
+			return minDelta < optionDelta && maxDelta > optionDelta
+		}),
+	)
 }
 
 // Fixes JS float imprecision error

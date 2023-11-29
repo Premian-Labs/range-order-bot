@@ -6,7 +6,6 @@ import {
 	defaultSpread,
 	maxCollateralApproved,
 	maxDelta,
-	maxDeploymentFee,
 	minAnnihilationSize,
 	minDelta,
 	minDTE,
@@ -634,7 +633,6 @@ async function deployPool(
 ) {
 	try {
 		const deploymentTx = await poolFactory.deployPool(poolKey, {
-			value: parseEther(maxDeploymentFee), // init fee excess refunded
 			gasLimit: 2_000_000, // fails to properly estimate gas limit
 		})
 

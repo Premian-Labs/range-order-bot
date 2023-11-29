@@ -165,14 +165,6 @@ export const minAnnihilationSize = 0.05
 export const autoDeploy = true
 
 /*
-	If autoDeploy is set to true, it is possible that this script will deploy
-	a pool if it is not available. If so, we can set the (max) fee associated with
-	deployment here.  Any excess is returned back. Value is in ETH.
- */
-// TODO: no longer needed
-export const maxDeploymentFee = '0.05'
-
-/*
 	This is the risk-free rate used in determining the option value via bsm.
 	The value is a percentage represented in decimal form (type: number)
  */
