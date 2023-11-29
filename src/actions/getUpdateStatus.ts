@@ -2,7 +2,7 @@ import { Option } from '@uqee/black-scholes'
 import uniqBy from 'lodash.uniqby'
 
 import { marketParams, defaultSpread } from '../config'
-import { state } from '../state'
+import { state } from '../config/state'
 import { createExpiration, getTTM } from '../utils/dates'
 import { log } from '../utils/logs'
 import { getGreeksAndIV } from '../utils/option'
@@ -177,6 +177,7 @@ async function processCallsAndPuts(
 	// PUTS
 	await Promise.all(
 		marketParams[market].putStrikes!.map(async (strike) => {
+			// TODO: why was this here?
 			const notExp = ttm > 0
 
 			const [iv, option] = await getGreeksAndIV(

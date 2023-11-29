@@ -9,7 +9,7 @@ import {
 	maxCollateralApproved,
 	withdrawOnly,
 } from './config'
-import { state } from './state'
+import { state } from './config/state'
 import { addresses } from './config/constants'
 import { premia } from './config/contracts'
 import { log } from './utils/logs'

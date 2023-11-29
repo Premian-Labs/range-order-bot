@@ -4,8 +4,8 @@ import { formatEther, parseEther } from 'ethers'
 import { riskFreeRate } from '../config'
 import { productionTokenAddr } from '../config/constants'
 import { ivOracle } from '../config/contracts'
-import { log } from '../utils/logs'
-import { delay } from '../utils/time'
+import { log } from './logs'
+import { delay } from './time'
 
 const blackScholes: BlackScholes = new BlackScholes()
 
