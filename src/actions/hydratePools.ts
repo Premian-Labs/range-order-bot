@@ -122,7 +122,7 @@ export async function processStrikes(
 			log.warning(
 				`Skipping ${op.market}-${op.maturity}-${op.strike}-${
 					op.isCall ? 'C' : 'P'
-				}'}`,
+				}`,
 			)
 
 			log.warning(`Option out of delta range. Delta: ${op.delta}`)
