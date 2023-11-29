@@ -17,35 +17,36 @@ export const logLevel: LogLevel = 'INFO'
 	possible some markets listed here might not trade if certain thresholds set by the user are breached.
 	All these settings/thresholds can be found below marketParam configuration.
 
-	markets (required): There MUST be an IV oracle/surface for each market.  Please see the README for available
+	markets (REQUIRED): There MUST be an IV oracle/surface for each market.  Please see the README for available
 	markets. Any markets that are not intended to be traded should be completely removed from marketParams.
 
-	address (required): Using addresses.tokens.{INSERT TOKEN SYMBOL} will add the token address for the given market. If
+	address (REQUIRED): Using addresses.tokens.{INSERT TOKEN SYMBOL} will add the token address for the given market. If
 	the market is not available, it will not populate.  Please see the README for available markets.
 
-	spotPriceEstimate (optional): This is the spot price estimate for the given market.  Required for the bot to withdraw
-	positions if the bot fails to fetch a spot price for a market.  This is NOT the oracle price, but rather a spot price
-	estimate used for withdrawing positions.  This is NOT required if the bot is deployed in a market that has a working spot
-	price oracle.
+	spotPriceEstimate (OPTIONAL): This is the spot price estimate for the given market.  Required for the bot to
+	withdraw positions if the bot fails to fetch a spot price for a market.  This is NOT the oracle price, but
+	rather a spot price estimate used for withdrawing positions.  This is NOT required if the bot is deployed in a
+	market that has a working spot price oracle.
 
-	maturities (required): All expirations to trade.  Invalid dates will be rejects and throw warnings while bot is
+	maturities (REQUIRED): All expirations to trade.  Invalid dates will be rejects and throw warnings while bot is
 	running.  Any options that have expired or expire while the bot is running will automatically exercise/settle positions.
 
-	strikes (optional): a user can input specific strikes that they would like to trade.  Optionally, if they would like
-	to trade all applicable strikes (within a delta range), BOTH callSTrikes and putStrikes can be COMPLETELY removed.
-	In this case the bot will depend on the min/max delta range as the limiting factors and the bot will trade
-	everything inbetween.
+	strikes (OPTIONAL): a user can input specific strikes that they would like to trade for either calls and/or puts.
+	If you would like to trade ONLY calls or ONLY puts, you can leave an empty array [] for the option type you
+	would like to omit. If you would like to trade ALL applicable strikes (within a delta range), BOTH callSTrikes
+	and putStrikes can be COMPLETELY removed from the object. In this case the bot will depend on the min/max delta
+	range as the limiting factors and the bot will trade everything inbetween.
 
-	depositSize (required): this is based on the number of option contracts your range order could possibly trade if
+	depositSize (REQUIRED): this is based on the number of option contracts your range order could possibly trade if
 	traversed fully. This should be smaller than maxExposure.  Note that collateral requirements are different for long
 	option positions vs short option positions.
 
-	maxExposure (required): max exposure applies to EITHER long or short exposure limits (contracts) when an exposure (long
+	maxExposure (REQUIRED): max exposure applies to EITHER long or short exposure limits (contracts) when an exposure (long
 	or short) is greater than or equal to this value. It will then enter into "close only" mode where it posts only one
 	range order using the existing positions in an attempt to close them. Limits apply for EACH option (K,T) individually,
 	not collectively.
 
-	minOptionPrice (required): This is the minimum price of an option in which we will still quote two-sided markets.
+	minOptionPrice (REQUIRED): This is the minimum price of an option in which we will still quote two-sided markets.
 	If price is lower, we will only quote a RIGHT SIDE order. A price lower than 0.004 may cause deposit errors due to
 	valid range width collision.
 	IMPORTANT: This is NORMALIZED PRICE. Calls are price in underlying and puts
@@ -53,7 +54,6 @@ export const logLevel: LogLevel = 'INFO'
 	put at 0.004 is (0.004 * 1500) in USDC terms.
  */
 
-// TODO FEATURE: enable Put only or Call only trading
 // TODO FEATURE: enable one-sided trading only (ie. left or right side)
 export const marketParams: MarketParams = {
 	WETH: {

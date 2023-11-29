@@ -122,7 +122,7 @@ export async function processStrikes(
 			log.warning(
 				`Skipping ${op.market}-${op.maturity}-${op.strike}-${
 					op.isCall ? 'C' : 'P'
-				}'}`,
+				}`,
 			)
 
 			log.warning(`Option out of delta range. Delta: ${op.delta}`)
@@ -429,9 +429,8 @@ async function processDeposits(
 
 	/* 
 		NOTE: We will still post single sided markets with options (close only quoting) so even if we have no
-			  collateral but at least one side can use options, we will still post that order.
-
-			  If BOTH orders require collateral and there is not enough for either: skip BOTH deposits.
+		collateral but at least one side can use options, we will still post that order. If BOTH orders require
+		collateral and there is not enough for either: skip BOTH deposits.
 	*/
 	if (
 		!sufficientCollateral &&
@@ -439,11 +438,24 @@ async function processDeposits(
 		rightSideCollateralAmount > 0
 	) {
 		log.warning(
-			`INSUFFICIENT COLLATERAL BALANCE. No collateral based range deposits made for 
-		${market} 
-		${maturityString} 
-		${strike} 
-		${isCall ? 'Call' : 'Put'}`,
+			`INSUFFICIENT COLLATERAL BALANCE. No collateral based range deposits made for ${market}-${maturityString}-${strike}-${
+				isCall ? 'Call' : 'Put'
+			}`,
+		)
+		return
+	}
+
+	/*
+		NOTE: if minOptionPrice is triggered, leftPosKey is NULL. If we do not have
+		sufficient collateral to post the right side order, we need to display a warning.
+		GOTCHA: when minOptionPrice is triggered, leftSideCollateralAmount is ZERO, this has two interpretations
+		which is why this additional sequence is needed (it means either no left side order or we are using options)
+	 */
+	if (!sufficientCollateral && !leftPosKey && rightSideCollateralAmount > 0) {
+		log.warning(
+			`INSUFFICIENT COLLATERAL BALANCE FOR RIGHT SIDE ORDER. No deposit made for ${market}-${maturityString}-${strike}-${
+				isCall ? 'Call' : 'Put'
+			}`,
 		)
 		return
 	}
@@ -631,7 +643,7 @@ async function deployPool(
 ) {
 	try {
 		const deploymentTx = await poolFactory.deployPool(poolKey, {
-			gasLimit: 2_000_000, // fails to properly estimate gas limit
+			gasLimit: 3_000_000, // fails to properly estimate gas limit
 		})
 
 		const confirm = await deploymentTx.wait(1)
@@ -664,7 +676,7 @@ async function annihilatePositions(
 ) {
 	try {
 		const annihilateTx = await executablePool.annihilate(poolBalance, {
-			gasLimit: 2_000_000,
+			gasLimit: 3_000_000,
 		})
 		const confirm = await annihilateTx.wait(1)
 
@@ -807,7 +819,7 @@ async function depositPosition(
 			0n,
 			parseEther('1'),
 			{
-				gasLimit: 2_000_000, // Fails to properly estimate gas limit
+				gasLimit: 3_000_000, // Fails to properly estimate gas limit
 			},
 		)
 

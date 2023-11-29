@@ -16,7 +16,7 @@ import { log } from '../utils/logs'
 export async function hydrateStrikes(market: string, spotPrice: number) {
 	if (!spotPrice) return
 
-	const longestMaturity = marketParams[market].maturities.pop() as string
+	const longestMaturity = marketParams[market].maturities.slice(-1)[0]
 	const maturityTimestamp = createExpiration(longestMaturity)
 	const ttm = getTTM(maturityTimestamp)
 
