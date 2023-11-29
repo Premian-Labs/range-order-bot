@@ -30,7 +30,7 @@ export async function filterSurroundingStrikes(
 	return await Promise.all(
 		strikes.filter(async (strike) => {
 			// NOTE: Errors are caught and warned within getGreeksAndIV and
-			// 		 an array of undefineds is returned if any errors occur
+			// 		 an array of undefined is returned if any errors occur
 			const [_, option] = await getGreeksAndIV(
 				market,
 				spotPrice,

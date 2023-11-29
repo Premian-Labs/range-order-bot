@@ -19,9 +19,9 @@ import {
 	botMultiCallProvider,
 } from '../config/contracts'
 import { lpAddress, addresses } from '../config/constants'
-import { state } from '../state'
+import { state } from '../config/state'
 import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
-import { setApproval } from '../utils/tokens'
+import { setApproval } from './setApprovals'
 import { PosKey } from '../utils/types'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
@@ -462,7 +462,6 @@ async function processDeposits(
 			maturityString,
 			rightPosKey,
 			false,
-			collateralTokenAddr,
 			parseUnits(String(rightSideCollateralAmount), decimals),
 			isCall,
 		)
@@ -482,7 +481,6 @@ async function processDeposits(
 			maturityString,
 			leftPosKey,
 			true,
-			collateralTokenAddr,
 			parseUnits(String(leftSideCollateralAmount), decimals),
 			isCall,
 		)
@@ -697,7 +695,6 @@ async function depositRangeOrderLiq(
 	maturity: string,
 	posKey: PosKey,
 	isLeftSide: boolean,
-	collateralTokenAddr: string,
 	collateralValue: bigint,
 	isCallPool: boolean,
 ) {
@@ -712,10 +709,6 @@ async function depositRangeOrderLiq(
 	try {
 		const depositSizeBigInt = parseEther(
 			marketParams[market].depositSize.toString(),
-		)
-		const token = premia.contracts.getTokenContract(
-			collateralTokenAddr,
-			premia.signer as any,
 		)
 
 		const nearestBelow = await executablePool.getNearestTicksBelow(
@@ -734,7 +727,8 @@ async function depositRangeOrderLiq(
 			(posKey.orderType == OrderType.COLLATERAL_SHORT && !isLeftSide)
 
 		if (approvalRequired && !maxCollateralApproved) {
-			await setApproval(collateralValue, token)
+			const collateralTokenSymbol = isCallPool ? market : 'USDC'
+			await setApproval(collateralTokenSymbol, collateralValue)
 		}
 
 		log.info(
