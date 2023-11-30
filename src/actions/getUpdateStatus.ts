@@ -20,6 +20,7 @@ import { getGreeksAndIV } from '../utils/option'
 	STATE CHANGES:
 	cycleOrders -> updated BEFORE withdraws (in getUpdateOptionParams) and AFTER a deposit
 	oracleFailure -> updated BEFORE withdrawals/deposits (in getUpdateOptionParams)
+	withdrawFailure -> update AFTER failed withdraw attempt and AFTER deposit attempt
  */
 
 // IMPORTANT: can ONLY be run if BOTH call/put strikes exist in marketParams
@@ -72,6 +73,7 @@ export async function getUpdateOptionParams(
 				cycleOrders: true, // set to establish position in first cycle
 				ivOracleFailure: iv === undefined,
 				spotOracleFailure: curPrice === undefined,
+				withdrawFailure: false,
 			})
 		}
 	}
@@ -152,6 +154,7 @@ async function processCallsAndPuts(
 						cycleOrders: true, // set to establish position in first cycle
 						ivOracleFailure: iv === undefined,
 						spotOracleFailure: spotPrice === undefined,
+						withdrawFailure: false,
 					})
 				}
 			} else {
@@ -212,6 +215,7 @@ async function processCallsAndPuts(
 						cycleOrders: true, // set to establish position in first cycle
 						ivOracleFailure: iv === undefined,
 						spotOracleFailure: spotPrice === undefined,
+						withdrawFailure: false,
 					})
 				}
 			} else {

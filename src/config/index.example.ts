@@ -78,7 +78,6 @@ export const marketParams: MarketParams = {
  */
 export const withdrawOnly = false
 
-
 /*
     If you would like to trade ALL applicable strikes (within your specified delta range), then this toggle needs to
     be set to TRUE and BOTH callStrikes and putStrikes key:value needs to be COMPLETELY removed from marketParams.

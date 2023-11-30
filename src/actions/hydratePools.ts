@@ -210,28 +210,7 @@ export async function processStrikes(
 		)
 
 		/*
-			NOTE: once the deposits are queued up, we need to do quality control checks to make sure that
-			we are not breaching any limits (ie max exposure or low account collateral balance)
-		*/
-
-		await processDeposits(
-			executablePool,
-			poolAddress,
-			op.market,
-			op.maturity,
-			op.strike,
-			isCall,
-			longBalance,
-			shortBalance,
-			rightPosKey,
-			rightSideCollateralAmount,
-			leftPosKey,
-			leftSideCollateralAmount,
-		)
-
-		/* 
 			NOTE: Find option using market/maturity/type/strike (should only be one)
-		
 			IMPORTANT: We use the unfiltered state.optionParams
 		*/
 		const optionIndex = state.optionParams.findIndex(
@@ -249,8 +228,41 @@ export async function processStrikes(
 			)
 		}
 
+		/*
+			NOTE: once the deposits are queued up, we need to do quality control checks to make sure that
+			we are not breaching any limits (ie max exposure or low account collateral balance).
+
+			IMPORTANT: if we failed to withdraw an existing positions, we can not process a deposit as there is risk
+			of it being a duplicate exposure.
+		*/
+
+		if (!state.optionParams[optionIndex].withdrawFailure) {
+			await processDeposits(
+				executablePool,
+				poolAddress,
+				op.market,
+				op.maturity,
+				op.strike,
+				isCall,
+				longBalance,
+				shortBalance,
+				rightPosKey,
+				rightSideCollateralAmount,
+				leftPosKey,
+				leftSideCollateralAmount,
+			)
+		} else {
+			log.warning(
+				`Due to withdraw failure, no deposits were attempted for ${op.market}-${
+					op.maturity
+				}-${op.strike}-${isCall ? 'C' : 'P'}`,
+			)
+		}
+
 		// IMPORTANT: after processing a deposit, turn update to false
 		state.optionParams[optionIndex].cycleOrders = false
+		// IMPORTANT: reset if deposit was blocked due to failed withdraw
+		state.optionParams[optionIndex].withdrawFailure = false
 	}
 }
 
