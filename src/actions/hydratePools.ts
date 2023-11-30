@@ -262,7 +262,7 @@ async function fetchOrDeployPool(
 	isCall: boolean,
 ) {
 	const poolKey: PoolKey = {
-		base: marketParams[market].address,
+		base: marketParams[market].address!, //set in getAddresses()
 		quote: addresses.tokens.USDC,
 		oracleAdapter: addresses.core.ChainlinkAdapterProxy.address,
 		strike: parseEther(strike.toString()),
@@ -399,7 +399,7 @@ async function processDeposits(
 ) {
 	// collateral address (for both LEFT & RIGHT side orders)
 	const collateralTokenAddr = isCall
-		? marketParams[market].address
+		? marketParams[market].address!
 		: addresses.tokens.USDC
 
 	const token = premia.contracts.getTokenContract(

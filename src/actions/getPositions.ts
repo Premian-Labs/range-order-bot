@@ -97,7 +97,7 @@ async function processStrike(
 	maturityTimestamp: number,
 ) {
 	const poolKey: PoolKey = {
-		base: marketParams[market].address,
+		base: marketParams[market].address!, //set in getAddresses()
 		quote: addresses.tokens.USDC,
 		oracleAdapter: addresses.core.ChainlinkAdapterProxy.address,
 		strike,

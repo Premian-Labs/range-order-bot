@@ -22,7 +22,7 @@ export interface SerializedPosKey {
 }
 
 export interface MarketParam {
-	address: string
+	address?: string // hydrated prior to bot running
 	maturities: string[]
 	spotPriceEstimate?: number // only used to withdraw if no spot price can be fetched
 	callStrikes?: number[] // if not passed, will be inferred from delta range
