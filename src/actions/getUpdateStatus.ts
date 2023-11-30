@@ -180,9 +180,6 @@ async function processCallsAndPuts(
 	// PUTS
 	await Promise.all(
 		marketParams[market].putStrikes!.map(async (strike) => {
-			// TODO: why was this here?
-			const notExp = ttm > 0
-
 			const [iv, option] = await getGreeksAndIV(
 				market,
 				spotPrice,
