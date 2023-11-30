@@ -120,6 +120,25 @@ export async function withdrawSettleLiquidity(market: string) {
 
 			log.info(`Finished withdrawing or settling position.`)
 		} catch (err) {
+			// NOTE: Find option using market/maturity/type/strike (should only be one)
+			const optionIndex = state.optionParams.findIndex(
+				(option) =>
+					option.market === filteredRangeOrder.market &&
+					option.maturity === filteredRangeOrder.maturity &&
+					option.isCall === filteredRangeOrder.isCall &&
+					option.strike === filteredRangeOrder.strike,
+			)
+
+			// IMPORTANT: -1 is returned if lpRangeOrder is not in state.optionParams. If this is the case there is a bug
+			if (optionIndex == -1) {
+				throw new Error(
+					'lpRangeOrder was not traceable in state.optionParams. Please contact dev team',
+				)
+			}
+
+			// IMPORTANT: this stops a subsequent deposit into this market
+			state.optionParams[optionIndex].withdrawFailure = true
+
 			log.warning(
 				`Attempt to withdraw failed: ${JSON.stringify(filteredRangeOrder)}`,
 			)
