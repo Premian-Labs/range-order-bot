@@ -251,6 +251,11 @@ export async function processStrikes(
 				leftPosKey,
 				leftSideCollateralAmount,
 			)
+		} else {
+			log.warning(
+				`Due to withdraw failure, no deposit was attempted for
+				${op.market}-${op.maturity}-${op.strike}-${isCall ? 'C' : 'P'}`,
+			)
 		}
 
 		// IMPORTANT: after processing a deposit, turn update to false
