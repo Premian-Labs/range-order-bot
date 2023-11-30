@@ -253,8 +253,9 @@ export async function processStrikes(
 			)
 		} else {
 			log.warning(
-				`Due to withdraw failure, no deposit was attempted for
-				${op.market}-${op.maturity}-${op.strike}-${isCall ? 'C' : 'P'}`,
+				`Due to withdraw failure, no deposits were attempted for ${op.market}-${
+					op.maturity
+				}-${op.strike}-${isCall ? 'C' : 'P'}`,
 			)
 		}
 
