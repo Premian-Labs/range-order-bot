@@ -2,7 +2,7 @@ import {
 	filterSurroundingStrikes,
 	getSurroundingStrikes,
 } from '../utils/strikes'
-import { marketParams } from '../config'
+import {autoGenerateStrikes, marketParams} from '../config'
 import { createExpiration, getTTM } from '../utils/dates'
 import { log } from '../utils/logs'
 
@@ -15,6 +15,14 @@ import { log } from '../utils/logs'
  */
 export async function hydrateStrikes(market: string, spotPrice: number) {
 	if (!spotPrice) return
+
+	// NOTE: protection incase a user accidentally omitted key:value for a set of strikes
+	if ((!marketParams[market].callStrikes || !marketParams[market].putStrikes) && !autoGenerateStrikes){
+		log.warning(`key:value marketParam is required for BOTH call/put strikes if autoGenerateStrikes is set to false`)
+		marketParams[market].callStrikes = marketParams[market].callStrikes ?? []
+		marketParams[market].putStrikes = marketParams[market].putStrikes ?? []
+		return
+	}
 
 	const longestMaturity = marketParams[market].maturities.slice(-1)[0]
 	const maturityTimestamp = createExpiration(longestMaturity)

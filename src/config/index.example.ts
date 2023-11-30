@@ -30,11 +30,9 @@ export const logLevel: LogLevel = 'DEBUG'
 	maturities (REQUIRED): All expirations to trade.  Invalid dates will be rejects and throw warnings while bot is
 	running.  Any options that have expired or expire while the bot is running will automatically exercise/settle positions.
 
-	strikes (OPTIONAL): a user can input specific strikes that they would like to trade for either calls and/or puts.
+	strikes (REQUIRED): a user can input specific strikes that they would like to trade for either calls and/or puts.
 	If you would like to trade ONLY calls or ONLY puts, you can leave an empty array [] for the option type you
-	would like to omit. If you would like to trade ALL applicable strikes (within a delta range), BOTH callSTrikes
-	and putStrikes can be COMPLETELY removed from the object. In this case the bot will depend on the min/max delta
-	range as the limiting factors and the bot will trade everything inbetween.
+	would like to omit.
 
 	depositSize (REQUIRED): this is based on the number of option contracts your range order could possibly trade if
 	traversed fully. This should be smaller than maxExposure.  Note that collateral requirements are different for long
@@ -53,7 +51,6 @@ export const logLevel: LogLevel = 'DEBUG'
 	put at 0.004 is (0.004 * 1500) in USDC terms.
  */
 
-// TODO FEATURE: enable one-sided trading only (ie. left or right side)
 export const marketParams: MarketParams = {
 	WETH: {
 		maturities: ['08DEC23', '15DEC23'],
@@ -75,9 +72,23 @@ export const marketParams: MarketParams = {
 
 /*
 	This is useful for situations where you want to withdraw all positions from
-	all markets without deploying new liquidity.
+	all markets without deploying new liquidity. This may happen if you stop/kill the bot and want to get out of the
+	positions the bot deployed for you.  After the bot stops, set this to true and run the bot again.  It will find
+	all your positions, withdraw them, and then stop.
  */
 export const withdrawOnly = false
+
+
+/*
+    If you would like to trade ALL applicable strikes (within your specified delta range), then this toggle needs to
+    be set to TRUE and BOTH callStrikes and putStrikes key:value needs to be COMPLETELY removed from marketParams.
+    The bot will depend on the min/max delta range as the limiting factors and the bot will trade everything inbetween.
+
+    IMPORTANT: this is an advanced feature. Only use if you have ample funds and are aware of all the strikes that
+    may exist within a delta range. Otherwise, leave false.
+ */
+
+export const autoGenerateStrikes = false
 
 /*
 	If an option markets delta goes outside the min/max range it will automatically be excluded from
@@ -88,8 +99,8 @@ export const withdrawOnly = false
 
 	NOTE: minDelta MUST be less than maxDelta
  */
-export const minDelta = 0.15 // .15 recommended
-export const maxDelta = 0.6 // .6 recommended
+export const minDelta = 0.1 // .15 recommended
+export const maxDelta = 0.8 // .6 recommended
 
 /*
 	If an option market falls below this threshold, it will automatically be excluded from new
