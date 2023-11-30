@@ -118,6 +118,8 @@ export async function processStrikes(
 		const maxDeltaThreshold = Math.abs(op.delta!) > maxDelta
 		const minDeltaThreshold = Math.abs(op.delta!) < minDelta
 
+		log.info(`${op.market}-${op.maturity}-${op.strike}-${op.isCall ? 'C' : 'P'} option delta : ${op.delta}`)
+
 		if (maxDeltaThreshold || minDeltaThreshold) {
 			log.warning(
 				`Skipping ${op.market}-${op.maturity}-${op.strike}-${
@@ -125,7 +127,7 @@ export async function processStrikes(
 				}`,
 			)
 
-			log.warning(`Option out of delta range. Delta: ${op.delta}`)
+			log.warning(`Option out of delta range. ${maxDeltaThreshold ? 'maxDelta' : 'minDelta'}: ${maxDeltaThreshold ? maxDelta : minDelta}`)
 			continue
 		}
 
