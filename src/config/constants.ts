@@ -4,8 +4,7 @@
  */
 
 import dotenv from 'dotenv'
-import arbAddresses from '@premia/v3-abi/deployment/arbitrum.json'
-import arbGoerliAddresses from '@premia/v3-abi/deployment/arbitrumGoerli.json'
+import { arbitrum, arbitrumGoerli } from '@premia/v3-abi/deployment'
 
 dotenv.config()
 const { ENV, TESTNET_RPC_URL, MAINNET_RPC_URL, LP_PKEY, LP_ADDRESS } =
@@ -20,11 +19,26 @@ export const rpcUrl = ENV == 'production' ? MAINNET_RPC_URL : TESTNET_RPC_URL
 export const privateKey = LP_PKEY
 export const lpAddress = LP_ADDRESS
 
-export const addresses =
-	ENV === 'production' ? arbAddresses : arbGoerliAddresses
-export const productionTokenAddr: Record<string, string> = arbAddresses.tokens
+export const addresses = ENV === 'production' ? arbitrum : arbitrumGoerli
 
-export const volatilityOracle = arbAddresses.core.VolatilityOracleProxy.address
+export const productionTokenAddr: Record<string, string> = arbitrum.tokens
+
+const productionTokensWithOracles = [
+	'WETH',
+	'WBTC',
+	'ARB',
+	'LINK',
+	'wstETH',
+	'GMX',
+	'MAGIC',
+]
+const developmentTokensWithOracles = ['WETH', 'WBTC', 'LINK']
+export const tokensWithOracles =
+	ENV === 'production'
+		? productionTokensWithOracles
+		: developmentTokensWithOracles
+
+export const volatilityOracle = arbitrum.core.VolatilityOracleProxy.address
 
 // the iv oracle is only available on arbitrum mainnet
 export const volatilityOracleRpcUrl = MAINNET_RPC_URL

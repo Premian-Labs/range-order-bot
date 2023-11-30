@@ -3,14 +3,13 @@
 	market conditions, and changes in available strikes/expirations
  */
 import { MarketParams } from '../utils/types'
-import { addresses } from './constants'
 import { LogLevel } from '../utils/logs'
 
 /*
 	Log levels can be set to one of the following levels: DEBUG | INFO | WARN | ERROR.  Each level is inclusive
 	of the next levels.  For example, if you set to INFO, you will also receive INFO, WARN, & ERROR logs.
  */
-export const logLevel: LogLevel = 'INFO'
+export const logLevel: LogLevel = 'DEBUG'
 
 /*
 	These are the designated markets in which to provide liquidity for. Please note that it is
@@ -57,9 +56,7 @@ export const logLevel: LogLevel = 'INFO'
 // TODO FEATURE: enable one-sided trading only (ie. left or right side)
 export const marketParams: MarketParams = {
 	WETH: {
-		address: addresses.tokens.WETH,
 		maturities: ['08DEC23', '15DEC23'],
-		spotPriceEstimate: 2000,
 		callStrikes: [2000],
 		putStrikes: [1900],
 		depositSize: 1,
@@ -67,9 +64,7 @@ export const marketParams: MarketParams = {
 		minOptionPrice: 0.003,
 	},
 	WBTC: {
-		address: addresses.tokens.WBTC,
 		maturities: ['08DEC23', '15DEC23'],
-		spotPriceEstimate: 36000,
 		callStrikes: [35000],
 		putStrikes: [35000],
 		depositSize: 0.05,

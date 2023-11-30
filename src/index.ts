@@ -19,6 +19,7 @@ import { withdrawSettleLiquidity } from './actions/withdrawPools'
 import { hydrateStrikes } from './actions/hydrateStrikes'
 import { getExistingPositions } from './actions/getPositions'
 import { deployLiquidity } from './actions/hydratePools'
+import { getTokenAddresses } from './actions/getTokenAddresses'
 
 let initialized = false
 
@@ -159,6 +160,9 @@ async function updateMarket(market: string) {
 
 async function runRangeOrderBot() {
 	log.app('Starting range order bot...')
+
+	// NOTE: We can assert downstream that marketParams will have addresses and is not undefined
+	getTokenAddresses()
 
 	if (withdrawOnly) {
 		log.app('Withdraw only mode is enabled, running withdraw process...')

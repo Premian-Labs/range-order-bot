@@ -11,7 +11,7 @@ export async function getSpotPrice(market: string, retry: boolean = true) {
 		return parseFloat(
 			formatEther(
 				await chainlink.getPrice(
-					marketParams[market].address,
+					marketParams[market].address!, //set in getAddresses()
 					addresses.tokens.USDC,
 				),
 			),

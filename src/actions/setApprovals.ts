@@ -12,7 +12,7 @@ export async function setApproval(
 	retry: boolean = true,
 ) {
 	const tokenAddress =
-		market === 'USDC' ? addresses.tokens.USDC : marketParams[market].address
+		market === 'USDC' ? addresses.tokens.USDC : marketParams[market].address! //set in getAddresses()
 	const token = premia.contracts.getTokenContract(
 		tokenAddress,
 		premia.signer as any,
