@@ -20,6 +20,7 @@ import { hydrateStrikes } from './actions/hydrateStrikes'
 import { getExistingPositions } from './actions/getPositions'
 import { deployLiquidity } from './actions/hydratePools'
 import { getTokenAddresses } from './actions/getTokenAddresses'
+import { logPortfolioSummary } from './actions/logPortfolioSummary'
 
 let initialized = false
 
@@ -82,6 +83,10 @@ async function initializePositions(market: string) {
 	if (!withdrawOnly) {
 		await deployLiquidity(market, curPrice)
 	}
+
+	log.info(`Initialization Cycle complete. Gathering summary...`)
+	// log output of current portfolio analytics
+	await logPortfolioSummary()
 }
 
 async function maintainPositions(market: string) {
@@ -104,7 +109,7 @@ async function maintainPositions(market: string) {
 	log.info(
 		`Updating spot price for ${market}: `,
 		curPrice,
-		moment.utc().format('YYYY-MM-HH:mm:ss'),
+		moment.utc().format('YYYY-MM-DD HH:mm:ss'),
 	)
 
 	await updateOnTrigger(market, curPrice, ts)
@@ -136,6 +141,10 @@ async function updateOnTrigger(market: string, curPrice: number, ts: number) {
 
 		// deploy liquidity in given market using marketParam settings
 		await deployLiquidity(market, curPrice)
+
+		log.info(`Maintenance cycle complete. Gathering summary...`)
+		// log output of current portfolio analytics
+		await logPortfolioSummary()
 	} else {
 		log.info(`No update triggered...`)
 	}

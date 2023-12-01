@@ -3,6 +3,7 @@ import { OrderType } from '@premia/v3-sdk'
 export interface State {
 	lpRangeOrders: Position[]
 	optionParams: OptionParams[]
+	portfolioSummary: PortfolioSummary
 }
 
 export interface PosKey {
@@ -44,6 +45,7 @@ export interface Position {
 	poolAddress: string
 	depositSize: number
 	posKey: SerializedPosKey
+	isCollateral: boolean | undefined
 }
 
 export interface OptionParams {
@@ -63,3 +65,21 @@ export interface OptionParams {
 	spotOracleFailure: boolean
 	withdrawFailure: boolean
 }
+
+export type OptionBalances = Record<string, number>
+
+export interface RangeOrderStats {
+	activeRangeOrders: number
+	tokenBasedRangeOrders: number
+	optionBasedRangeOrders: number
+	totalCollateralUsed: number
+}
+export interface MarketSummary {
+	tokenBalance: number
+	rangeOrderStats: RangeOrderStats
+	tokensUsedAsCollateral: number
+	optionsUsedAsCollateral: number
+	optionPositions: OptionBalances
+}
+
+export type PortfolioSummary = Record<string, MarketSummary>

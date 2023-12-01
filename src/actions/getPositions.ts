@@ -197,9 +197,20 @@ async function processTokenIds(
 				formatEther(await pool.balanceOf(lpAddress, tokenId)),
 			)
 
+			/*
+				NOTE: we set isCollateral to undefined because we do not know for certain what type of collateral was
+				used on an existing position. Nevertheless, this param is only used for post cycle position analysis
+				and all preexisting positions are liquidated.
+			 */
+
 			if (lpTokenBalance > 0) {
 				const position: Position = {
 					market,
+					isCall: isCall,
+					strike: Number(formatEther(strike)),
+					maturity: maturityString,
+					poolAddress,
+					depositSize: lpTokenBalance,
 					posKey: {
 						owner: lpAddress,
 						operator: positionKey.operator,
@@ -207,11 +218,7 @@ async function processTokenIds(
 						upper: formatEther(positionKey.upper),
 						orderType: positionKey.orderType,
 					},
-					depositSize: lpTokenBalance,
-					poolAddress,
-					strike: Number(formatEther(strike)),
-					maturity: maturityString,
-					isCall: isCall,
+					isCollateral: undefined,
 				}
 
 				state.lpRangeOrders.push(position)

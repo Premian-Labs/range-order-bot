@@ -55,22 +55,9 @@ is familiar with how range orders work, and the risks associated with owning opt
 
 ## Quick Start
 
-1. Clone the repository on a local computer.
-2. While in the root directory, run `yarn install` to install package dependencies.
-3. Create a `.env` file using the same format at the example and add necessary information. Note that ENV should
-   either be `development` or `production`.
-4. Navigate to `src/config/index.example.ts` and review each and every setting. Create a new file called
-   `index.ts` in the same config directory to populate custom settings by copy-pasting from example file. Instructions & descriptions of settings are provided in the example file.
+1. Clone the repository on a local computer. Instructions on how to do this can be found [here](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository).
+2. Open a terminal and navigate to the root directory, run `yarn install` to install package dependencies.
+3. Find the `.env.example` file and rename it to `.env`.  Add necessary information that is required. Note that ENV 
+   variable should either be `development` for Arbitrum Goerli or `production` to use on Arbitrum Mainnet.
+4. Navigate to `src/config/index.example.ts` and rename it to `index.ts`. Review each and every setting. Instructions & descriptions of settings are provided in the example file.
 5. Run `yarn start` in the command line to run the range order bot.
-
-## Improvement List & Changelog
-
-- [x] make minOptionPrice per market for better granular control
-- [x] convert timeThresholdMin into hours
-- [x] ignore liquidity settings to avoid loss of trade setting on repo updates
-- [x] add delta and theta based lp range updates for more efficient updating
-- [x] pull quotes if there is an iv oracle chronic failure
-- [x] remove deploymentFee for new pools
-- [ ] remove npm token requirement on SDK
-- [ ] add sell-only or buy-only exposure settings in marketParams to provide one-sided liq
-

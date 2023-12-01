@@ -85,8 +85,15 @@ export function nextYearOfMaturities() {
 
 	maturities.push(tomorrow, afterTomorrow)
 
-	if (!nextFriday.isSame(tomorrow) && !nextFriday.isSame(afterTomorrow))
+	if (
+		!nextFriday.isSame(today, 'day') &&
+		!nextFriday.isSame(tomorrow, 'day') &&
+		!nextFriday.isSame(afterTomorrow, 'day')
+	)
 		maturities.push(nextFriday)
+
+	if (moment.utc().day() === FRIDAY && moment.utc().hour() < 8)
+		maturities.push(today)
 
 	const next2ndFriday = nextFriday.clone().add(1, 'week')
 	const next3rdFriday = nextFriday.clone().add(2, 'week')
