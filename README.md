@@ -62,15 +62,3 @@ is familiar with how range orders work, and the risks associated with owning opt
 4. Navigate to `src/config/index.example.ts` and review each and every setting. Create a new file called
    `index.ts` in the same config directory to populate custom settings by copy-pasting from example file. Instructions & descriptions of settings are provided in the example file.
 5. Run `yarn start` in the command line to run the range order bot.
-
-## Improvement List & Changelog
-
-- [x] make minOptionPrice per market for better granular control
-- [x] convert timeThresholdMin into hours
-- [x] ignore liquidity settings to avoid loss of trade setting on repo updates
-- [x] add delta and theta based lp range updates for more efficient updating
-- [x] pull quotes if there is an iv oracle chronic failure
-- [x] remove deploymentFee for new pools
-- [ ] remove npm token requirement on SDK
-- [ ] add sell-only or buy-only exposure settings in marketParams to provide one-sided liq
-
