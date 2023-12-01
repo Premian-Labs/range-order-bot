@@ -106,7 +106,7 @@ export async function processStrikes(
 
 		// Skip the deposit if range order is not due for a cycle update (we never withdrew)
 		if (!op.cycleOrders) {
-			log.debug(
+			log.info(
 				`${op.market}-${op.maturity}-${op.strike}-${
 					op.isCall ? 'C' : 'P'
 				} did not breach update threshold...checking next market`,
@@ -238,6 +238,7 @@ export async function processStrikes(
 			of it being a duplicate exposure.
 		*/
 
+		// NOTE: withdrawFailure is done here b/c we need to update withdrawFailure status and need the optionIndex
 		if (!state.optionParams[optionIndex].withdrawFailure) {
 			await processDeposits(
 				executablePool,
@@ -748,11 +749,11 @@ async function depositRangeOrderLiq(
 			approvals for options to be deposited.
 		*/
 
-		const approvalRequired =
+		const collateralRequired =
 			(posKey.orderType == OrderType.LONG_COLLATERAL && isLeftSide) ||
 			(posKey.orderType == OrderType.COLLATERAL_SHORT && !isLeftSide)
 
-		if (approvalRequired && !maxCollateralApproved) {
+		if (collateralRequired && !maxCollateralApproved) {
 			const collateralTokenSymbol = isCallPool ? market : 'USDC'
 			await setApproval(collateralTokenSymbol, collateralValue)
 		}
@@ -806,6 +807,7 @@ async function depositRangeOrderLiq(
 			poolAddress,
 			depositSize: marketParams[market].depositSize,
 			posKey: serializedPosKey,
+			isCollateral: collateralRequired
 		})
 	} catch (err) {
 		log.error(`Error depositing range order: ${err}`)

@@ -44,6 +44,7 @@ export interface Position {
 	poolAddress: string
 	depositSize: number
 	posKey: SerializedPosKey
+	isCollateral: boolean | undefined
 }
 
 export interface OptionParams {
