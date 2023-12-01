@@ -22,6 +22,7 @@ export const premia = Premia.initializeSync({
 
 export const signerAddress = (premia.signer as Wallet).address
 
+//NOTE: we do not use a multicall provider here b/c we use poolFactory to deploy
 export const poolFactory = IPoolFactory__factory.connect(
 	addresses.core.PoolFactoryProxy.address,
 	premia.signer as any,

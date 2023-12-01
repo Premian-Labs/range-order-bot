@@ -46,6 +46,7 @@ export async function getUpdateOptionParams(
 
 	// EXISTING POSITION INITIALIZATION
 	if (!initialized && state.lpRangeOrders.length > 0) {
+		// NOTE: we want unique poolAddresses here since we only want 1 optionParam per pool
 		for (const existingPosition of uniqBy(state.lpRangeOrders, 'poolAddress')) {
 			const maturityTimestamp = createExpiration(existingPosition.maturity)
 			const ttm = getTTM(maturityTimestamp)
