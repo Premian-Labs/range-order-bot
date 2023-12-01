@@ -218,7 +218,7 @@ async function processTokenIds(
 						upper: formatEther(positionKey.upper),
 						orderType: positionKey.orderType,
 					},
-					isCollateral: undefined
+					isCollateral: undefined,
 				}
 
 				state.lpRangeOrders.push(position)

@@ -118,7 +118,11 @@ export async function processStrikes(
 		const maxDeltaThreshold = Math.abs(op.delta!) > maxDelta
 		const minDeltaThreshold = Math.abs(op.delta!) < minDelta
 
-		log.info(`${op.market}-${op.maturity}-${op.strike}-${op.isCall ? 'C' : 'P'} option delta : ${op.delta}`)
+		log.info(
+			`${op.market}-${op.maturity}-${op.strike}-${
+				op.isCall ? 'C' : 'P'
+			} option delta : ${op.delta}`,
+		)
 
 		if (maxDeltaThreshold || minDeltaThreshold) {
 			log.warning(
@@ -127,7 +131,11 @@ export async function processStrikes(
 				}`,
 			)
 
-			log.warning(`Option out of delta range. ${maxDeltaThreshold ? 'maxDelta' : 'minDelta'}: ${maxDeltaThreshold ? maxDelta : minDelta}`)
+			log.warning(
+				`Option out of delta range. ${
+					maxDeltaThreshold ? 'maxDelta' : 'minDelta'
+				}: ${maxDeltaThreshold ? maxDelta : minDelta}`,
+			)
 			continue
 		}
 
@@ -269,7 +277,7 @@ export async function processStrikes(
 	}
 }
 
-async function fetchOrDeployPool(
+export async function fetchOrDeployPool(
 	market: string,
 	maturityString: string,
 	maturityTimestamp: number,
@@ -807,7 +815,7 @@ async function depositRangeOrderLiq(
 			poolAddress,
 			depositSize: marketParams[market].depositSize,
 			posKey: serializedPosKey,
-			isCollateral: collateralRequired
+			isCollateral: collateralRequired,
 		})
 	} catch (err) {
 		log.error(`Error depositing range order: ${err}`)

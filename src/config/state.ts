@@ -4,4 +4,5 @@ import { State } from '../utils/types'
 export const state: State = {
 	lpRangeOrders: [],
 	optionParams: [],
+	portfolioSummary: {},
 }
