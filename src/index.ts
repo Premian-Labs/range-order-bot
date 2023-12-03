@@ -23,6 +23,7 @@ import { getTokenAddresses } from './actions/getTokenAddresses'
 import { logPortfolioSummary } from './actions/logPortfolioSummary'
 
 let initialized = false
+let updateTriggered = false
 
 async function initializePositions(market: string) {
 	log.app(`Initializing positions for ${market}`)
@@ -83,10 +84,6 @@ async function initializePositions(market: string) {
 	if (!withdrawOnly) {
 		await deployLiquidity(market, curPrice)
 	}
-
-	log.info(`Initialization Cycle complete. Gathering summary...`)
-	// log output of current portfolio analytics
-	await logPortfolioSummary()
 }
 
 async function maintainPositions(market: string) {
@@ -126,7 +123,7 @@ async function updateOnTrigger(market: string, curPrice: number, ts: number) {
 	// force update if a threshold is reached
 	if (abovePriceThresh || belowPriceThresh || pastTimeThresh) {
 		log.info('Threshold trigger reached. Checking for updates...')
-
+		updateTriggered = true // set to true to enable portfolio logging after update
 		if (abovePriceThresh) log.info(`Above Price Threshold`)
 		if (belowPriceThresh) log.info(`Below Price Threshold`)
 		if (pastTimeThresh) log.info(`Time Threshold`)
@@ -141,10 +138,6 @@ async function updateOnTrigger(market: string, curPrice: number, ts: number) {
 
 		// deploy liquidity in given market using marketParam settings
 		await deployLiquidity(market, curPrice)
-
-		log.info(`Maintenance cycle complete. Gathering summary...`)
-		// log output of current portfolio analytics
-		await logPortfolioSummary()
 	} else {
 		log.info(`No update triggered...`)
 	}
@@ -191,14 +184,28 @@ async function runRangeOrderBot() {
 		log.info(`USDC approval set to MAX`)
 	}
 
-	// iterate through each market to determine is liquidity needs to be deployed/updated
+	// iterate through EACH MARKET to determine is liquidity needs to be deployed/updated
 	// @dev: this cannot be parallelized because it would run into nonce issues
 	for (const market of Object.keys(marketParams)) {
 		await updateMarket(market)
 	}
 
-	// NOTE: after first run, initialized will remain true
-	initialized = true
+	// On first cycle, produce portfolio summary
+	if (!initialized) {
+		log.info(`Initialization cycle complete. Gathering summary...`)
+		// log output of current portfolio analytics
+		await logPortfolioSummary()
+		// NOTE: after first run, initialized will remain true
+		initialized = true
+	}
+
+	if (updateTriggered) {
+		log.info(`Maintenance cycle complete. Gathering summary...`)
+		// log output of current portfolio analytics
+		await logPortfolioSummary()
+		// reset boolean so maintenance cycles w/o updates don't log portfolio summary
+		updateTriggered = false
+	}
 }
 
 async function main() {
