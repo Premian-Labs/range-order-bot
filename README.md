@@ -24,7 +24,7 @@ There are a couple of things that are needed in order to work with the range ord
 - The repository is written in Typescript and thus requires [Node](https://nodejs.org/en/download) to be installed
 - An RPC provider (such as [Alchemy](https://www.alchemy.com/) or [Infura](https://www.infura.io/)). Due to the higher RPC throughput demand for programmatic trading, a premium RPC API key may be necessary.
 - An understanding of range orders and how concentrated liquidity works on Premia v3. If you have not done so please
-  see our docs on [Range Orders](https://docs.premia)
+  see our docs on [Range Orders](https://docs.premia.blue/the-premia-protocol/concepts/lp-range-orders)
 
 ## Supported Pairs
 

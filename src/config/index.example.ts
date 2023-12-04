@@ -36,7 +36,17 @@ export const logLevel: LogLevel = 'DEBUG'
 
 	depositSize (REQUIRED): this is based on the number of option contracts your range order could possibly trade if
 	traversed fully. This should be smaller than maxExposure.  Note that collateral requirements are different for long
-	option positions vs short option positions.
+	option positions vs short option positions. A rough rule of thumb when determining how much collateral will be
+	required:
+
+		M = # of maturities
+		Sc = # of call strikes
+		D = depositSize
+
+		M * Sc  * D * 1.25 = suggested minimum Base Token Collateral
+
+		M * (sum of all put strikes) * D * 1.25 = suggested minimum Quote Token Collateral
+
 
 	maxExposure (REQUIRED): max exposure applies to EITHER long or short exposure limits (contracts) when an exposure (long
 	or short) is greater than or equal to this value. It will then enter into "close only" mode where it posts only one
@@ -50,6 +60,7 @@ export const logLevel: LogLevel = 'DEBUG'
 	are priced in USDC but based on the strike price. For example, a 1500 strike
 	put at 0.004 is (0.004 * 1500) in USDC terms.
  */
+
 
 export const marketParams: MarketParams = {
 	WETH: {
