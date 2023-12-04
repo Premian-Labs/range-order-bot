@@ -47,9 +47,15 @@ export async function logPortfolioSummary() {
 	// LP RANGE ORDER SUMMARY
 	await getRangeOrdersStats(collateralTokens)
 
-	log.info(
-		`Portfolio Summary: ${JSON.stringify(state.portfolioSummary, null, 4)}`,
-	)
+	console.log(`\n`)
+	// NOTE: deliberate console.log to change terminal color to default
+	console.log(`\x1b[39m Portfolio Summary: \n`)
+	for (const collateralToken in state.portfolioSummary) {
+		console.group(collateralToken)
+		console.log(state.portfolioSummary[collateralToken])
+		console.groupEnd()
+	}
+	console.log(`\n`)
 }
 
 async function getCollateralBalances(collateralTokens: string[]) {

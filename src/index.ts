@@ -192,7 +192,7 @@ async function runRangeOrderBot() {
 
 	// On first cycle, produce portfolio summary
 	if (!initialized) {
-		log.info(`Initialization cycle complete. Gathering summary...`)
+		log.app(`Initialization cycle complete. Gathering summary...`)
 		// log output of current portfolio analytics
 		await logPortfolioSummary()
 		// NOTE: after first run, initialized will remain true
@@ -200,7 +200,7 @@ async function runRangeOrderBot() {
 	}
 
 	if (updateTriggered) {
-		log.info(`Maintenance cycle complete. Gathering summary...`)
+		log.app(`Maintenance cycle complete. Gathering summary...`)
 		// log output of current portfolio analytics
 		await logPortfolioSummary()
 		// reset boolean so maintenance cycles w/o updates don't log portfolio summary
