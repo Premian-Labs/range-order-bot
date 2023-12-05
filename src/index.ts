@@ -1,6 +1,7 @@
 import moment from 'moment'
 import { MaxUint256 } from 'ethers'
 
+import { premia } from './utils/premia'
 import {
 	marketParams,
 	spotMoveThreshold,
@@ -209,6 +210,7 @@ async function runRangeOrderBot() {
 }
 
 async function main() {
+	console.log(premia)
 	while (true) {
 		await runRangeOrderBot()
 
