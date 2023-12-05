@@ -89,3 +89,4 @@ many things the bot does NOT do.  They include:
 
 ## Improvement List & Changelog
 -[ ] Enable trading by side (buy only, sell only, both sides)
+-[ ] Create parameter to allow taker orders for mispriced options prior to range deposits
