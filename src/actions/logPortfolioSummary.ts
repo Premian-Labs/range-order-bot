@@ -122,7 +122,7 @@ async function getOptionPositions(collateralTokens: string[]) {
 
 			let longBalance: number
 			let shortBalance: number
-			try{
+			try {
 				[longBalance, shortBalance] = await Promise.all([
 					parseFloat(
 						formatEther(
@@ -135,7 +135,7 @@ async function getOptionPositions(collateralTokens: string[]) {
 						),
 					),
 				])
-			}catch(err){
+			} catch(err) {
 				log.warning(
 					`Could not query balances for ${market}-${op.maturity}-${
 						op.strike
