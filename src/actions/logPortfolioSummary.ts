@@ -101,9 +101,10 @@ async function getOptionPositions(collateralTokens: string[]) {
 				isCallPool: op.isCall,
 			}
 			let poolAddress: string
+			let isDeployed: boolean
 			try {
 				//NOTE: poolFactory instance does not use a multicall provider
-				;[poolAddress] = await poolFactory.getPoolAddress(poolKey)
+				;[poolAddress, isDeployed] = await poolFactory.getPoolAddress(poolKey)
 			} catch (e) {
 				log.warning(
 					`Could not get pool address for ${market}-${op.maturity}-${
@@ -113,41 +114,47 @@ async function getOptionPositions(collateralTokens: string[]) {
 				continue
 			}
 
-			const multicallPool = premia.contracts.getPoolContract(
-				poolAddress,
-				botMultiCallProvider,
-			)
-
-			log.debug(`Getting Balances for: ${market}-${op.maturity}-${op.strike}-${op.isCall ? 'C' : 'P'}`)
-
-			let longBalance: number
-			let shortBalance: number
-			try {
-				[longBalance, shortBalance] = await Promise.all([
-					parseFloat(
-						formatEther(
-							await multicallPool.balanceOf(lpAddress!, TokenType.LONG),
-						),
-					),
-					parseFloat(
-						formatEther(
-							await multicallPool.balanceOf(lpAddress!, TokenType.SHORT),
-						),
-					),
-				])
-			} catch(err) {
-				log.warning(
-					`Could not query balances for ${market}-${op.maturity}-${
-						op.strike
-					}-${op.isCall ? 'C' : 'P'}`,
+			if (isDeployed) {
+				const multicallPool = premia.contracts.getPoolContract(
+					poolAddress,
+					botMultiCallProvider,
 				)
-				continue
-			}
 
-			// log net exposure for each option market
-			state.portfolioSummary[market].optionPositions[
-				`${op.market}-${op.maturity}-${op.strike}-${op.isCall ? 'C' : 'P'}:`
-			] = Number((longBalance - shortBalance).toFixed(4))
+				log.debug(
+					`Getting Balances for: ${market}-${op.maturity}-${op.strike}-${
+						op.isCall ? 'C' : 'P'
+					}`,
+				)
+
+				let longBalance: number
+				let shortBalance: number
+				try {
+					;[longBalance, shortBalance] = await Promise.all([
+						parseFloat(
+							formatEther(
+								await multicallPool.balanceOf(lpAddress!, TokenType.LONG),
+							),
+						),
+						parseFloat(
+							formatEther(
+								await multicallPool.balanceOf(lpAddress!, TokenType.SHORT),
+							),
+						),
+					])
+				} catch (err) {
+					log.warning(
+						`Could not query balances for ${market}-${op.maturity}-${
+							op.strike
+						}-${op.isCall ? 'C' : 'P'}`,
+					)
+					continue
+				}
+
+				// log net exposure for each option market
+				state.portfolioSummary[market].optionPositions[
+					`${op.market}-${op.maturity}-${op.strike}-${op.isCall ? 'C' : 'P'}:`
+				] = Number((longBalance - shortBalance).toFixed(4))
+			}
 		}
 	}
 }
