@@ -61,7 +61,6 @@ export const logLevel: LogLevel = 'DEBUG'
 	put at 0.004 is (0.004 * 1500) in USDC terms.
  */
 
-
 export const marketParams: MarketParams = {
 	WETH: {
 		maturities: ['08DEC23', '15DEC23'],
