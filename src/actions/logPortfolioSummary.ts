@@ -120,8 +120,8 @@ async function getOptionPositions(collateralTokens: string[]) {
 
 			log.debug(`Getting Balances for: ${market}-${op.maturity}-${op.strike}-${op.isCall ? 'C' : 'P'}`)
 
-			let longBalance  = 0
-			let shortBalance = 0
+			let longBalance: number
+			let shortBalance: number
 			try{
 				[longBalance, shortBalance] = await Promise.all([
 					parseFloat(
