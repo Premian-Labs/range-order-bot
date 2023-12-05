@@ -106,7 +106,7 @@ async function getOptionPositions(collateralTokens: string[]) {
 				;[poolAddress] = await poolFactory.getPoolAddress(poolKey)
 			} catch (e) {
 				log.warning(
-					`Could get get existing positions for ${market}-${op.maturity}-${
+					`Could not get pool address for ${market}-${op.maturity}-${
 						op.strike
 					}-${op.isCall ? 'C' : 'P'}`,
 				)
@@ -118,20 +118,31 @@ async function getOptionPositions(collateralTokens: string[]) {
 				botMultiCallProvider,
 			)
 
-			let [_, longBalance, shortBalance] = await Promise.all([
-				parseFloat(formatEther(await multicallPool.marketPrice())),
+			log.debug(`Getting Balances for: ${market}-${op.maturity}-${op.strike}-${op.isCall ? 'C' : 'P'}`)
 
-				parseFloat(
-					formatEther(
-						await multicallPool.balanceOf(lpAddress!, TokenType.LONG),
+			let longBalance  = 0
+			let shortBalance = 0
+			try{
+				[longBalance, shortBalance] = await Promise.all([
+					parseFloat(
+						formatEther(
+							await multicallPool.balanceOf(lpAddress!, TokenType.LONG),
+						),
 					),
-				),
-				parseFloat(
-					formatEther(
-						await multicallPool.balanceOf(lpAddress!, TokenType.SHORT),
+					parseFloat(
+						formatEther(
+							await multicallPool.balanceOf(lpAddress!, TokenType.SHORT),
+						),
 					),
-				),
-			])
+				])
+			}catch(err){
+				log.warning(
+					`Could not query balances for ${market}-${op.maturity}-${
+						op.strike
+					}-${op.isCall ? 'C' : 'P'}`,
+				)
+				continue
+			}
 
 			// log net exposure for each option market
 			state.portfolioSummary[market].optionPositions[
