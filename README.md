@@ -66,15 +66,15 @@ There are many built-in features that a user should be aware.  Some features inc
 - The bot utilizes a user defined spread away from the fair value to capture an edge.  Additionally, the bot is 
   entitled to trading [fees](https://docs.premia.blue/the-premia-protocol/concepts/fees) that the taker pays.
 - The bot will automatically withdraw range orders, and deposits updated ranges when the spread is lost due to 
-  tradings or option price movement.
-- Since options Premia options are ERC1155's. There is both a LONG option token and a SHORT option token.  The 
+  trading or option price movement.
+- Since Premia options are ERC1155's. There is both a LONG option token and a SHORT option token.  The 
   bot will automatically pair off long and short exposures to release collateral. 
 - If positions accrue, the bot will begin to use options when depositing into range orders instead of collateral.
 - If an option that the bot is trading expires, the bot will automatically settle the option to release the collateral.
 - The bot will withdraw all liquidity if there is a feed failure in either the IV or Spot Oracle.
 - Parameters such as min/max delta and minDTE (days to expiration) can be used to filter what options are traded and 
   when to stop trading them as time passes.
-- There are parameters that can be utilized to cap max exposure
+- There are parameters that can be utilized to cap max exposure and enter into "close only" mode
 
 ## LIMITATIONS
 While the bot has many automated features, it should not be deemed a "set it and forget it" type of bot.  There are 
@@ -84,7 +84,7 @@ many things the bot does NOT do.  They include:
   of the contract. It is up to the user to make adjustments for this.
 - The bot does NOT delta hedge positions.  This is something a user must do on their own.
 - The bot will NOT help determine the appropriate size to trade. This is purely at the users discretion
-- There is NOT built in management of collateral tokens.  It is up to the user to maintain proper collateral 
+- There is NO built in management of collateral tokens.  It is up to the user to maintain proper collateral 
   balances for a given market.
 - The bot is NOT a money printing black-box. It is merely an automation tool for market making.
 
