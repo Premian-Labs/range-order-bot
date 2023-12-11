@@ -35,7 +35,7 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 <div align="center">
 
 | Token Symbol | Arbitrum Goerli (Development) | Arbitrum (Production) |
-|:------------:| :---------------------------: | :-------------------: |
+|:------------:|:-----------------------------:|:---------------------:|
 |     WETH     |      :heavy_check_mark:       |  :heavy_check_mark:   |
 |     WBTC     |      :heavy_check_mark:       |  :heavy_check_mark:   |
 |     ARB      |                               |  :heavy_check_mark:   |
@@ -84,7 +84,7 @@ many things the bot does NOT do.  They include:
   of the contract. It is up to the user to make adjustments for this.
 - The bot does NOT delta hedge positions.  This is something a user must do on their own.
 - The bot will NOT help determine the appropriate size to trade. This is purely at the users discretion
-- There is NO built in management of collateral tokens.  It is up to the user to maintain proper collateral 
+- There is NO built-in management of collateral tokens.  It is up to the user to maintain proper collateral 
   balances for a given market.
 - The bot is NOT a money printing black-box. It is merely an automation tool for market making.
 
