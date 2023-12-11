@@ -5,6 +5,7 @@
 
 import dotenv from 'dotenv'
 import { arbitrum, arbitrumGoerli } from '@premia/v3-abi/deployment'
+import { IPool__factory} from "@premia/v3-abi/typechain";
 
 dotenv.config()
 const { ENV, TESTNET_RPC_URL, MAINNET_RPC_URL, LP_PKEY, LP_ADDRESS } =
