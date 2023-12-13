@@ -1,5 +1,5 @@
 import { Option } from '@uqee/black-scholes'
-import uniqBy from 'lodash.uniqby'
+import { uniqBy } from 'lodash'
 
 import { marketParams, defaultSpread } from '../config'
 import { state } from '../config/state'
