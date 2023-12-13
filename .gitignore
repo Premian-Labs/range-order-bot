@@ -5,8 +5,8 @@
 
 node_modules
 yarn.lock
-package-lock
 dist
 .npmrc
 
 src/config/index.ts
+/package-lock.json
