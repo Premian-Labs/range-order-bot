@@ -21,6 +21,7 @@ highly recommended that a user is familiar with how range orders work, and the r
 There are a couple of things that are needed in order to work with the range order bot locally. They include:
 
 - An EOA (Externally Owned Account) on Ethereum (funded on _Arbitrum_) with a wallet provider such as [Metamask](https://metamask.io/)
+- If funds are on Ethereum (Mainnet) funds can be bridged to Arbitrum [here](https://bridge.arbitrum.io/?l2ChainId=42161)
 - The repository is written in Typescript and thus requires [Node](https://nodejs.org/en/download) to be installed
 - Git optionally can be used to clone the repository. It can be installed from [here](https://git-scm.com/downloads)
 - An RPC provider (such as [Alchemy](https://www.alchemy.com/) or [Infura](https://www.infura.io/)). Due to the higher RPC throughput demand for programmatic trading, a premium RPC API key may be necessary.
