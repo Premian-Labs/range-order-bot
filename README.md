@@ -51,8 +51,8 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 ## Quick Start
 
 1. Clone the repository on a local computer. Instructions on how to do this can be found [here](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository).
-2. Open a terminal and navigate to the root directory, run `yarn install` or `npm install` to install package 
-   dependencies.
+2. Open a terminal and navigate to the root directory, run `yarn install` (if yarn is installed locally) or `npm 
+   install` to install package dependencies.
 3. Find the `.env.example` file and rename it to `.env`.  Add necessary information that is required. Note that ENV 
    variable should either be `development` for Arbitrum Goerli or `production` to use on Arbitrum Mainnet.
 4. Navigate to `src/config/index.example.ts` and rename it to `index.ts`. Review each and every setting. Instructions & descriptions of settings are provided in the example file.
