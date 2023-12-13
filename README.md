@@ -21,7 +21,9 @@ highly recommended that a user is familiar with how range orders work, and the r
 There are a couple of things that are needed in order to work with the range order bot locally. They include:
 
 - An EOA (Externally Owned Account) on Ethereum (funded on _Arbitrum_) with a wallet provider such as [Metamask](https://metamask.io/)
+- If funds are on Ethereum (Mainnet) funds can be bridged to Arbitrum [here](https://bridge.arbitrum.io/?l2ChainId=42161)
 - The repository is written in Typescript and thus requires [Node](https://nodejs.org/en/download) to be installed
+- Git optionally can be used to clone the repository. It can be installed from [here](https://git-scm.com/downloads)
 - An RPC provider (such as [Alchemy](https://www.alchemy.com/) or [Infura](https://www.infura.io/)). Due to the higher RPC throughput demand for programmatic trading, a premium RPC API key may be necessary.
 - An understanding of range orders and how concentrated liquidity works on Premia v3. If you have not done so please
   see our docs on [Range Orders](https://docs.premia.blue/the-premia-protocol/concepts/lp-range-orders)
@@ -50,7 +52,8 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 ## Quick Start
 
 1. Clone the repository on a local computer. Instructions on how to do this can be found [here](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository).
-2. Open a terminal and navigate to the root directory, run `yarn install` to install package dependencies.
+2. Open a terminal and navigate to the root directory, run `yarn install` (if yarn is installed locally) or `npm 
+   install` to install package dependencies.
 3. Find the `.env.example` file and rename it to `.env`.  Add necessary information that is required. Note that ENV 
    variable should either be `development` for Arbitrum Goerli or `production` to use on Arbitrum Mainnet.
 4. Navigate to `src/config/index.example.ts` and rename it to `index.ts`. Review each and every setting. Instructions & descriptions of settings are provided in the example file.

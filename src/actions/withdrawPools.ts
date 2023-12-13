@@ -1,6 +1,6 @@
 import { IPool, OrderType, formatTokenId } from '@premia/v3-sdk'
 import { parseEther, formatEther } from 'ethers'
-import isEqual from 'lodash.isequal'
+import { isEqual } from 'lodash'
 import moment from 'moment/moment'
 
 import { lpAddress } from '../config/constants'

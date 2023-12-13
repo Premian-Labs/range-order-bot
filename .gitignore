@@ -9,4 +9,4 @@ dist
 .npmrc
 
 src/config/index.ts
-typechain
+/package-lock.json
