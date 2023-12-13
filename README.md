@@ -22,6 +22,7 @@ There are a couple of things that are needed in order to work with the range ord
 
 - An EOA (Externally Owned Account) on Ethereum (funded on _Arbitrum_) with a wallet provider such as [Metamask](https://metamask.io/)
 - The repository is written in Typescript and thus requires [Node](https://nodejs.org/en/download) to be installed
+- Git optionally can be used to clone the repository. It can be installed from [here](https://git-scm.com/downloads)
 - An RPC provider (such as [Alchemy](https://www.alchemy.com/) or [Infura](https://www.infura.io/)). Due to the higher RPC throughput demand for programmatic trading, a premium RPC API key may be necessary.
 - An understanding of range orders and how concentrated liquidity works on Premia v3. If you have not done so please
   see our docs on [Range Orders](https://docs.premia.blue/the-premia-protocol/concepts/lp-range-orders)
