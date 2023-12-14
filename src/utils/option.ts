@@ -22,6 +22,15 @@ export async function getGreeksAndIV(
 	if (spotPrice === undefined) {
 		return [undefined, undefined]
 	}
+	if (ttm <= 0){
+		log.info(
+			`Settling range orders for ${market}-${strike}-${
+				isCall ? 'C' : 'P'
+			} if they exist`,
+		)
+		// NOTE: we don't return an option object since we don't know the spot price at time of exp
+		return [0, undefined]
+	}
 
 	try {
 		iv = parseFloat(
