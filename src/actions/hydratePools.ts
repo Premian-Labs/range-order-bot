@@ -154,7 +154,8 @@ export async function processStrikes(
 		// NOTE: if null, we are skipping the strike due to checks in fetchOrDeployPool()
 		if (!fetchedPoolInfo) continue
 
-		const { multicallPool, executablePool, poolAddress } = fetchedPoolInfo
+		const { multicallPool, executablePool, poolAddress, botDeployedPool } =
+			fetchedPoolInfo
 
 		let [marketPrice, longBalance, shortBalance] = await Promise.all([
 			parseFloat(formatEther(await multicallPool.marketPrice())),
@@ -216,6 +217,7 @@ export async function processStrikes(
 			marketPrice,
 			optionPrice,
 			shortBalance,
+			botDeployedPool,
 		)
 
 		/*
@@ -283,6 +285,8 @@ export async function fetchOrDeployPool(
 	strike: number,
 	isCall: boolean,
 ) {
+	let botDeployedPool = false
+
 	const poolKey: PoolKey = {
 		base: marketParams[market].address!, //set in getAddresses()
 		quote: addresses.tokens.USDC,
@@ -326,7 +330,7 @@ export async function fetchOrDeployPool(
 			premia.signer as any,
 		)
 
-		return { multicallPool, executablePool, poolAddress }
+		return { multicallPool, executablePool, poolAddress, botDeployedPool }
 	}
 
 	const ttm = getTTM(maturityTimestamp)
@@ -344,6 +348,8 @@ export async function fetchOrDeployPool(
 
 		try {
 			await deployPool(poolKey, market, maturityString, strike, isCall)
+			// NOTE: used downstream for leftSide orders on initial deployment
+			botDeployedPool = true
 		} catch {
 			log.warning(
 				`Pool was not deployed, skipping ${market} ${maturityString} ${strike} ${
@@ -365,7 +371,7 @@ export async function fetchOrDeployPool(
 		premia.signer as any,
 	)
 
-	return { multicallPool, executablePool, poolAddress }
+	return { multicallPool, executablePool, poolAddress, botDeployedPool }
 }
 
 async function processAnnihilate(
@@ -579,9 +585,12 @@ async function prepareLeftSideOrder(
 	marketPrice: number,
 	optionPrice: number,
 	shortBalance: number,
+	botDeployedPool: boolean,
 ) {
 	// set default values in case we violate minOptionPrice and skip section
-	const leftRefPrice = marketPrice < optionPrice ? marketPrice : optionPrice
+	// NOTE: if the pool was freshly deployed, we use the fair value price instead
+	const leftRefPrice =
+		marketPrice < optionPrice && !botDeployedPool ? marketPrice : optionPrice
 
 	let leftSideCollateralAmount = 0
 	let leftPosKey: PosKey | undefined
@@ -641,7 +650,6 @@ async function prepareLeftSideOrder(
 				isCall ? 'Calls' : 'Puts'
 			}`,
 		)
-
 		return { leftPosKey: null, leftSideCollateralAmount: 0 }
 	}
 }
