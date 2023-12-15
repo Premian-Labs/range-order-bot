@@ -852,7 +852,7 @@ async function depositPosition(
 			0n,
 			parseEther('1'),
 			{
-				gasLimit: depositTxGasEst, // Fails to properly estimate gas limit
+				gasLimit: depositTxGasEst,
 			},
 		)
 
