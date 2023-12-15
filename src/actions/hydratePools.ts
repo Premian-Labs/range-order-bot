@@ -664,7 +664,7 @@ async function deployPool(
 ) {
 	try {
 		const deploymentTx = await poolFactory.deployPool(poolKey, {
-			gasLimit: await poolFactory.deployPool.estimateGas(poolKey),
+			gasLimit: (await poolFactory.deployPool.estimateGas(poolKey)) + 100_000n,
 		})
 
 		const confirm = await deploymentTx.wait(1)
@@ -697,7 +697,8 @@ async function annihilatePositions(
 ) {
 	try {
 		const annihilateTx = await executablePool.annihilate(poolBalance, {
-			gasLimit: await executablePool.annihilate.estimateGas(poolBalance),
+			gasLimit:
+				(await executablePool.annihilate.estimateGas(poolBalance)) + 100_000n,
 		})
 		const confirm = await annihilateTx.wait(1)
 
@@ -852,7 +853,7 @@ async function depositPosition(
 			0n,
 			parseEther('1'),
 			{
-				gasLimit: depositTxGasEst,
+				gasLimit: depositTxGasEst + 100_000n,
 			},
 		)
 
