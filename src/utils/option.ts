@@ -22,7 +22,7 @@ export async function getGreeksAndIV(
 	if (spotPrice === undefined) {
 		return [undefined, undefined]
 	}
-	if (ttm <= 0){
+	if (ttm <= 0) {
 		log.info(
 			`Settling range orders for ${market}-${strike}-${
 				isCall ? 'C' : 'P'
