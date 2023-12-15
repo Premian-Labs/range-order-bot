@@ -203,7 +203,8 @@ async function withdrawPosition(
 
 		try {
 			const settlePositionTx = await executablePool.settlePosition(posKey, {
-				gasLimit: 10_000_000,
+				gasLimit:
+					(await executablePool.settlePosition.estimateGas(posKey)) + 100_000n,
 			})
 			const confirm = await settlePositionTx.wait(1)
 
@@ -228,12 +229,19 @@ async function withdrawPosition(
 	}
 
 	try {
+		const withdrawTxGasEst = await executablePool.withdraw.estimateGas(
+			posKey,
+			poolBalance.toString(),
+			0,
+			parseEther('1'),
+		)
+
 		const withdrawTx = await executablePool.withdraw(
 			posKey,
 			poolBalance.toString(),
 			0,
 			parseEther('1'),
-			{ gasLimit: 10_000_000 },
+			{ gasLimit: withdrawTxGasEst + 100_000n },
 		)
 
 		const confirm = await withdrawTx.wait(1)
