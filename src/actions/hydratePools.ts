@@ -664,7 +664,7 @@ async function deployPool(
 ) {
 	try {
 		const deploymentTx = await poolFactory.deployPool(poolKey, {
-			gasLimit: 10_000_000, // fails to properly estimate gas limit
+			gasLimit: await poolFactory.deployPool.estimateGas(poolKey),
 		})
 
 		const confirm = await deploymentTx.wait(1)
@@ -697,7 +697,7 @@ async function annihilatePositions(
 ) {
 	try {
 		const annihilateTx = await executablePool.annihilate(poolBalance, {
-			gasLimit: 10_000_000,
+			gasLimit: await executablePool.annihilate.estimateGas(poolBalance),
 		})
 		const confirm = await annihilateTx.wait(1)
 
@@ -831,6 +831,17 @@ async function depositPosition(
 	retry: boolean = true,
 ) {
 	try {
+		const depositTxGasEst = await executablePool[
+			'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)'
+		].estimateGas(
+			posKey,
+			nearestBelow.nearestBelowLower,
+			nearestBelow.nearestBelowUpper,
+			depositSize,
+			0n,
+			parseEther('1'),
+		)
+
 		const depositTx = await executablePool[
 			'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)'
 		](
@@ -841,7 +852,7 @@ async function depositPosition(
 			0n,
 			parseEther('1'),
 			{
-				gasLimit: 10_000_000, // Fails to properly estimate gas limit
+				gasLimit: depositTxGasEst, // Fails to properly estimate gas limit
 			},
 		)
 
