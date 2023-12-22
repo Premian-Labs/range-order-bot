@@ -411,7 +411,7 @@ async function processDeposits(
 	isCall: boolean,
 	longBalance: number,
 	shortBalance: number,
-	rightPosKey: PosKey,
+	rightPosKey: PosKey | null,
 	rightSideCollateralAmount: number,
 	leftPosKey: PosKey | null,
 	leftSideCollateralAmount: number,
@@ -443,19 +443,17 @@ async function processDeposits(
 	const sufficientCollateral =
 		collateralBalance >= rightSideCollateralAmount + leftSideCollateralAmount
 	// NOTE: if we are using options, then the return value for collateralAmount returns ZERO
-	const rightSideUsesOptions = rightSideCollateralAmount == 0
-	const leftSideUsesOptions = leftSideCollateralAmount == 0
+	const rightSideUsesOptions =
+		rightSideCollateralAmount == 0 && rightPosKey !== null
+	const leftSideUsesOptions =
+		leftSideCollateralAmount == 0 && leftPosKey !== null
 
 	/* 
+		If BOTH orders require collateral and there is not enough for either: skip BOTH deposits.
 		NOTE: We will still post single sided markets with options (close only quoting) so even if we have no
-		collateral but at least one side can use options, we will still post that order. If BOTH orders require
-		collateral and there is not enough for either: skip BOTH deposits.
+		collateral but at least one side can use options, we will still post that order.
 	*/
-	if (
-		!sufficientCollateral &&
-		leftSideCollateralAmount > 0 &&
-		rightSideCollateralAmount > 0
-	) {
+	if (!sufficientCollateral && !rightSideUsesOptions && !leftSideUsesOptions) {
 		log.warning(
 			`INSUFFICIENT COLLATERAL BALANCE. No collateral based range deposits made for ${market}-${maturityString}-${strike}-${
 				isCall ? 'Call' : 'Put'
@@ -467,10 +465,8 @@ async function processDeposits(
 	/*
 		NOTE: if minOptionPrice is triggered, leftPosKey is NULL. If we do not have
 		sufficient collateral to post the right side order, we need to display a warning.
-		GOTCHA: when minOptionPrice is triggered, leftSideCollateralAmount is ZERO, this has two interpretations
-		which is why this additional sequence is needed (it means either no left side order or we are using options)
 	 */
-	if (!sufficientCollateral && !leftPosKey && rightSideCollateralAmount > 0) {
+	if (!sufficientCollateral && !leftPosKey && !rightSideUsesOptions) {
 		log.warning(
 			`INSUFFICIENT COLLATERAL BALANCE FOR RIGHT SIDE ORDER. No deposit made for ${market}-${maturityString}-${strike}-${
 				isCall ? 'Call' : 'Put'
@@ -483,7 +479,7 @@ async function processDeposits(
 	if (shortBalance >= marketParams[market].maxExposure) {
 		log.warning('Max SHORT exposure reached, no RIGHT SIDE order placed..')
 		// if we are posting options only or have sufficient collateral do deposit: process
-	} else if (rightSideUsesOptions || sufficientCollateral) {
+	} else if (rightPosKey && (rightSideUsesOptions || sufficientCollateral)) {
 		// RIGHT SIDE ORDER
 		await depositRangeOrderLiq(
 			market,
@@ -498,7 +494,7 @@ async function processDeposits(
 		)
 	}
 
-	// check to see if we have breached our position limit for RIGHT SIDE orders
+	// check to see if we have breached our position limit for LEFT SIDE orders
 	if (longBalance >= marketParams[market].maxExposure) {
 		log.warning('Max LONG exposure reached, no LEFT SIDE order placed..')
 		// if we are posting options only or have sufficient collateral do deposit: process
@@ -537,11 +533,19 @@ async function prepareRightSideOrder(
 	log.debug(`${isCall ? 'Call' : 'Put'} marketPriceUpper: ${marketPriceUpper}`)
 	log.debug(`${isCall ? 'Call' : 'Put'} targetUpper: ${targetUpperTick}`)
 
-	const [lowerTickCS, upperTickCS] = getValidRangeWidth(
-		marketPriceUpper,
-		targetUpperTick,
-		'RIGHT',
-	)
+	let lowerTickCS: number
+	let upperTickCS: number
+	try {
+		;[lowerTickCS, upperTickCS] = getValidRangeWidth(
+			marketPriceUpper,
+			targetUpperTick,
+			'RIGHT',
+		)
+	} catch (err) {
+		log.warning(`Unable to deploy right side liq due to invalid Range Width`)
+		log.debug(`Error message for getValidRangeWidth ${err}`)
+		return { rightPosKey: null, rightSideCollateralAmount: 0 }
+	}
 
 	log.info(
 		`Final RIGHT SIDE Order-> Lower: ${lowerTickCS} and Upper: ${upperTickCS}`,
@@ -607,11 +611,19 @@ async function prepareLeftSideOrder(
 		)
 		log.debug(`${isCall ? 'Call' : 'Put'} targetLower: ${targetLowerTick}`)
 
-		const [lowerTickLC, upperTickLC] = getValidRangeWidth(
-			targetLowerTick,
-			marketPriceLower,
-			'LEFT',
-		)
+		let lowerTickLC: number
+		let upperTickLC: number
+		try {
+			;[lowerTickLC, upperTickLC] = getValidRangeWidth(
+				targetLowerTick,
+				marketPriceLower,
+				'LEFT',
+			)
+		} catch (err) {
+			log.warning(`Unable to deploy left side liq due to invalid Range Width`)
+			log.debug(`Error message for getValidRangeWidth ${err}`)
+			return { leftPosKey: null, leftSideCollateralAmount: 0 }
+		}
 
 		log.info(
 			`Final LEFT SIDE Order-> Lower: ${lowerTickLC} and Upper: ${upperTickLC}`,
