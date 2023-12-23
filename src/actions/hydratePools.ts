@@ -439,7 +439,7 @@ async function processDeposits(
 		collateralBalance >= right.collateralAmount + left.collateralAmount
 
 	/* 
-		If BOTH orders require collateral and there is not enough for either: skip BOTH deposits.
+		If BOTH orders require collateral and there is not enough for both: skip BOTH deposits.
 		NOTE: We will still post single sided markets with options (close only quoting) so even if we have no
 		collateral but at least one side can use options, we will still post that order.
 	*/
@@ -457,13 +457,11 @@ async function processDeposits(
 	}
 
 	/*
-		NOTE: if minOptionPrice is triggered, leftPosKey is NULL. If we do not have
-		sufficient collateral to post the right side order, we need to display a warning.
+		If EITHER the left/right side have an improper range width, we should skip BOTH deposits.
 	 */
-	//FIXME: leftPosKey can be null for either invalid Range width OR minOptionPrice violation
-	if (!sufficientCollateral && !left.posKey && right.collateralAmount > 0) {
+	if (!left.isValidWidth || !right.isValidWidth) {
 		log.warning(
-			`INSUFFICIENT COLLATERAL BALANCE FOR RIGHT SIDE ORDER. No deposit made for ${market}-${maturityString}-${strike}-${
+			`Due to invalid range width for one or more orders. No deposits were made for ${market}-${maturityString}-${strike}-${
 				isCall ? 'Call' : 'Put'
 			}`,
 		)
@@ -474,7 +472,7 @@ async function processDeposits(
 	if (shortBalance >= marketParams[market].maxExposure) {
 		log.warning('Max SHORT exposure reached, no RIGHT SIDE order placed..')
 		// if we are posting options only or have sufficient collateral do deposit: process
-	} else if (right.posKey && (right.usesOptions || sufficientCollateral)) {
+	} else if (right.usesOptions || sufficientCollateral) {
 		// RIGHT SIDE ORDER
 		await depositRangeOrderLiq(
 			market,
@@ -482,7 +480,7 @@ async function processDeposits(
 			poolAddress,
 			strike,
 			maturityString,
-			right.posKey,
+			right.posKey!, //only null if isValidWidth = false
 			false,
 			parseUnits(String(right.collateralAmount), decimals),
 			isCall,
@@ -493,7 +491,11 @@ async function processDeposits(
 	if (longBalance >= marketParams[market].maxExposure) {
 		log.warning('Max LONG exposure reached, no LEFT SIDE order placed..')
 		// if we are posting options only or have sufficient collateral do deposit: process
-	} else if (left.posKey && (left.usesOptions || sufficientCollateral)) {
+		// additionally for left side orders we check minOptionPriceTriggered
+	} else if (
+		!left.minOptionPriceTriggered &&
+		(left.usesOptions || sufficientCollateral)
+	) {
 		// LEFT SIDE ORDER
 		await depositRangeOrderLiq(
 			market,
@@ -501,7 +503,7 @@ async function processDeposits(
 			poolAddress,
 			strike,
 			maturityString,
-			left.posKey,
+			left.posKey!, // null only if minOptionPriceTriggered || isValidWith = false
 			true,
 			parseUnits(String(left.collateralAmount), decimals),
 			isCall,
@@ -682,8 +684,8 @@ async function prepareLeftSideOrder(
 			posKey: null,
 			collateralAmount: 0,
 			isValidWidth: true,
-			minOptionPriceTriggered: true, // critical value
 			usesOptions: false,
+			minOptionPriceTriggered: true, // critical value
 		}
 	}
 }
