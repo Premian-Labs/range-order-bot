@@ -434,6 +434,12 @@ async function processDeposits(
 		}`,
 	)
 
+	/*
+		NOTE: to understand the proper sequences below, please review the RangeOrderSpecs for both Left and Right
+		side orders.  Left Side orders can have 3 different outcomes (1 good, 2 bad), Right side orders can have 2
+		different outcomes (1 good, 1 bad).
+	 */
+
 	// determine deposit capabilities
 	const sufficientCollateral =
 		collateralBalance >= right.collateralAmount + left.collateralAmount
