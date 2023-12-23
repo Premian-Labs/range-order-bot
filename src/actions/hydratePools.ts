@@ -437,7 +437,8 @@ async function processDeposits(
 	/*
 		NOTE: to understand the proper sequences below, please review the RangeOrderSpecs for both Left and Right
 		side orders.  Left Side orders can have 3 different outcomes (1 good, 2 bad), Right side orders can have 2
-		different outcomes (1 good, 1 bad).
+		different outcomes (1 good, 1 bad). Additionally, we are able to cross-check our collateral requirements in
+		this process below as an additional filter.
 	 */
 
 	// determine deposit capabilities
@@ -463,7 +464,8 @@ async function processDeposits(
 	}
 
 	/*
-		If EITHER the left/right side have an improper range width, we should skip BOTH deposits.
+		If EITHER the left/right side have an improper range width, we should skip BOTH deposits automatically as
+		 the bots intention was to have two range orders, but at least one failed to create a valid range order.
 	 */
 	if (!left.isValidWidth || !right.isValidWidth) {
 		log.warning(
