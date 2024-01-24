@@ -38,9 +38,9 @@ export function createExpiration(maturity: string): number {
 	}
 
 	// 3. WEEKLY OPTIONS: check if option expiration is Friday
-	if (expirationMoment.day() !== 5) {
-		throw new Error(`${expirationMoment.toJSON()} is not Friday!`)
-	}
+	//if (expirationMoment.day() !== 5) {
+	//	throw new Error(`${expirationMoment.toJSON()} is not Friday!`)
+	//}
 
 	// 4. MONTHLY OPTIONS: if option maturity > 30 days, validate expire is last Friday of the month
 	if (daysToExpiration > 30) {

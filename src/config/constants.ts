@@ -28,9 +28,11 @@ const productionTokensWithOracles = [
 	'WBTC',
 	'ARB',
 	'LINK',
-	'wstETH',
+	'WSTETH',
 	'GMX',
 	'MAGIC',
+	'SOL',
+	'FXS'
 ]
 const developmentTokensWithOracles = ['WETH', 'WBTC', 'LINK']
 export const tokensWithOracles =

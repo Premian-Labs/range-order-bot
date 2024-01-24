@@ -10,3 +10,7 @@ dist
 
 src/config/index.ts
 typechain
+
+# misc
+.DS_Store
+*.pem
