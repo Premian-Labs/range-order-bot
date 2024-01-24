@@ -16,7 +16,7 @@
 	"scripts": {
 		"build": "tsc --build",
 		"prettier": "./node_modules/.bin/prettier --write --ignore-path .gitignore ./src/**",
-		"start": "npx ts-node src/index.ts"
+		"start": "bun ts-node src/index.ts"
 	},
 	"dependencies": {
 		"@premia/v3-abi": "^1.2.4",
@@ -35,6 +35,6 @@
 		"prettier": "^3.1.0",
 		"ts-node": "^10.9.1",
 		"typescript": "^5.3.2"
-	},
+	}
 }
 
