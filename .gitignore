@@ -8,7 +8,7 @@ yarn.lock
 dist
 .npmrc
 
-src/config/index.ts
+# src/config/index.ts
 typechain
 
 # misc
