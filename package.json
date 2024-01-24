@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 {
 	"name": "@premia/range-order-bot",
 	"version": "1.0.0",
@@ -40,3 +41,5 @@
 		"node": ">=14"
 	}
 }
+=======
+>>>>>>> Stashed changes
