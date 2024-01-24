@@ -2,7 +2,6 @@ import { formatEther, parseEther, formatUnits, parseUnits } from 'ethers'
 import { IPool, OrderType, PoolKey, TokenType } from '@premia/v3-sdk'
 
 import {
-	autoDeploy,
 	defaultSpread,
 	maxCollateralApproved,
 	maxDelta,
@@ -22,7 +21,7 @@ import { lpAddress, addresses } from '../config/constants'
 import { state } from '../config/state'
 import { createExpiration, getDaysToExpiration, getTTM } from '../utils/dates'
 import { setApproval } from './setApprovals'
-import { PosKey } from '../utils/types'
+import { PosKey, RangeOrderSpecs } from '../utils/types'
 import { log } from '../utils/logs'
 import { delay } from '../utils/time'
 import {
@@ -152,10 +151,11 @@ export async function processStrikes(
 			isCall,
 		)
 
-		// NOTE: if null, we are skipping the strike due to param checks in fetchOrDeployPool()
+		// NOTE: if null, we are skipping the strike due to checks in fetchOrDeployPool()
 		if (!fetchedPoolInfo) continue
 
-		const { multicallPool, executablePool, poolAddress } = fetchedPoolInfo
+		const { multicallPool, executablePool, poolAddress, botDeployedPool } =
+			fetchedPoolInfo
 
 		let [marketPrice, longBalance, shortBalance] = await Promise.all([
 			parseFloat(formatEther(await multicallPool.marketPrice())),
@@ -193,15 +193,14 @@ export async function processStrikes(
 			to issues with crossing markets with range orders (which cause the range order to fail)
  		*/
 
-		const { rightPosKey, rightSideCollateralAmount } =
-			await prepareRightSideOrder(
-				op.market,
-				op.strike,
-				isCall,
-				marketPrice,
-				optionPrice,
-				longBalance,
-			)
+		const rightSideOrderSpecs = await prepareRightSideOrder(
+			op.market,
+			op.strike,
+			isCall,
+			marketPrice,
+			optionPrice,
+			longBalance,
+		)
 
 		/*
 			NOTE: for LEFT SIDE orders if market price < option price than we use market price due
@@ -209,7 +208,7 @@ export async function processStrikes(
 			leftPosKey is null when the minOptionPrice config threshold is breached
  		*/
 
-		const { leftPosKey, leftSideCollateralAmount } = await prepareLeftSideOrder(
+		const leftSideOrderSpecs = await prepareLeftSideOrder(
 			op.market,
 			op.maturity,
 			op.strike,
@@ -217,6 +216,7 @@ export async function processStrikes(
 			marketPrice,
 			optionPrice,
 			shortBalance,
+			botDeployedPool,
 		)
 
 		/*
@@ -257,10 +257,8 @@ export async function processStrikes(
 				isCall,
 				longBalance,
 				shortBalance,
-				rightPosKey,
-				rightSideCollateralAmount,
-				leftPosKey,
-				leftSideCollateralAmount,
+				leftSideOrderSpecs,
+				rightSideOrderSpecs,
 			)
 		} else {
 			log.warning(
@@ -284,6 +282,8 @@ export async function fetchOrDeployPool(
 	strike: number,
 	isCall: boolean,
 ) {
+	let botDeployedPool = false
+
 	const poolKey: PoolKey = {
 		base: marketParams[market].address!, //set in getAddresses()
 		quote: addresses.tokens.USDC,
@@ -327,16 +327,7 @@ export async function fetchOrDeployPool(
 			premia.signer as any,
 		)
 
-		return { multicallPool, executablePool, poolAddress }
-	}
-
-	if (!isDeployed && !autoDeploy) {
-		log.warning(
-			`Skipping ${market} ${maturityString}-${strike}-${
-				isCall ? 'C' : 'P'
-			}. No Pool Exists.`,
-		)
-		return null
+		return { multicallPool, executablePool, poolAddress, botDeployedPool }
 	}
 
 	const ttm = getTTM(maturityTimestamp)
@@ -349,11 +340,13 @@ export async function fetchOrDeployPool(
 		return null
 	}
 
-	if (!isDeployed && autoDeploy) {
+	if (!isDeployed) {
 		log.info(`Pool does not exist. Deploying pool now....`)
 
 		try {
 			await deployPool(poolKey, market, maturityString, strike, isCall)
+			// NOTE: used downstream for leftSide orders on initial deployment
+			botDeployedPool = true
 		} catch {
 			log.warning(
 				`Pool was not deployed, skipping ${market} ${maturityString} ${strike} ${
@@ -375,7 +368,7 @@ export async function fetchOrDeployPool(
 		premia.signer as any,
 	)
 
-	return { multicallPool, executablePool, poolAddress }
+	return { multicallPool, executablePool, poolAddress, botDeployedPool }
 }
 
 async function processAnnihilate(
@@ -415,10 +408,8 @@ async function processDeposits(
 	isCall: boolean,
 	longBalance: number,
 	shortBalance: number,
-	rightPosKey: PosKey,
-	rightSideCollateralAmount: number,
-	leftPosKey: PosKey | null,
-	leftSideCollateralAmount: number,
+	left: RangeOrderSpecs,
+	right: RangeOrderSpecs,
 ) {
 	// collateral address (for both LEFT & RIGHT side orders)
 	const collateralTokenAddr = isCall
@@ -443,22 +434,26 @@ async function processDeposits(
 		}`,
 	)
 
+	/*
+		NOTE: to understand the proper sequences below, please review the RangeOrderSpecs for both Left and Right
+		side orders.  Left Side orders can have 3 different outcomes (1 good, 2 bad), Right side orders can have 2
+		different outcomes (1 good, 1 bad). Additionally, we are able to cross-check our collateral requirements in
+		this process below as an additional filter.
+	 */
+
 	// determine deposit capabilities
 	const sufficientCollateral =
-		collateralBalance >= rightSideCollateralAmount + leftSideCollateralAmount
-	// NOTE: if we are using options, then the return value for collateralAmount returns ZERO
-	const rightSideUsesOptions = rightSideCollateralAmount == 0
-	const leftSideUsesOptions = leftSideCollateralAmount == 0
+		collateralBalance >= right.collateralAmount + left.collateralAmount
 
 	/* 
+		If BOTH orders require collateral and there is not enough for both: skip BOTH deposits.
 		NOTE: We will still post single sided markets with options (close only quoting) so even if we have no
-		collateral but at least one side can use options, we will still post that order. If BOTH orders require
-		collateral and there is not enough for either: skip BOTH deposits.
+		collateral but at least one side can use options, we will still post that order.
 	*/
 	if (
 		!sufficientCollateral &&
-		leftSideCollateralAmount > 0 &&
-		rightSideCollateralAmount > 0
+		right.collateralAmount > 0 &&
+		left.collateralAmount > 0
 	) {
 		log.warning(
 			`INSUFFICIENT COLLATERAL BALANCE. No collateral based range deposits made for ${market}-${maturityString}-${strike}-${
@@ -469,14 +464,12 @@ async function processDeposits(
 	}
 
 	/*
-		NOTE: if minOptionPrice is triggered, leftPosKey is NULL. If we do not have
-		sufficient collateral to post the right side order, we need to display a warning.
-		GOTCHA: when minOptionPrice is triggered, leftSideCollateralAmount is ZERO, this has two interpretations
-		which is why this additional sequence is needed (it means either no left side order or we are using options)
+		If EITHER the left/right side have an improper range width, we should skip BOTH deposits automatically as
+		 the bots intention was to have two range orders, but at least one failed to create a valid range order.
 	 */
-	if (!sufficientCollateral && !leftPosKey && rightSideCollateralAmount > 0) {
+	if (!left.isValidWidth || !right.isValidWidth) {
 		log.warning(
-			`INSUFFICIENT COLLATERAL BALANCE FOR RIGHT SIDE ORDER. No deposit made for ${market}-${maturityString}-${strike}-${
+			`Due to invalid range width for one or more orders. No deposits were made for ${market}-${maturityString}-${strike}-${
 				isCall ? 'Call' : 'Put'
 			}`,
 		)
@@ -487,7 +480,7 @@ async function processDeposits(
 	if (shortBalance >= marketParams[market].maxExposure) {
 		log.warning('Max SHORT exposure reached, no RIGHT SIDE order placed..')
 		// if we are posting options only or have sufficient collateral do deposit: process
-	} else if (rightSideUsesOptions || sufficientCollateral) {
+	} else if (right.usesOptions || sufficientCollateral) {
 		// RIGHT SIDE ORDER
 		await depositRangeOrderLiq(
 			market,
@@ -495,18 +488,22 @@ async function processDeposits(
 			poolAddress,
 			strike,
 			maturityString,
-			rightPosKey,
+			right.posKey!, //only null if isValidWidth = false
 			false,
-			parseUnits(String(rightSideCollateralAmount), decimals),
+			parseUnits(String(right.collateralAmount), decimals),
 			isCall,
 		)
 	}
 
-	// check to see if we have breached our position limit for RIGHT SIDE orders
+	// check to see if we have breached our position limit for LEFT SIDE orders
 	if (longBalance >= marketParams[market].maxExposure) {
 		log.warning('Max LONG exposure reached, no LEFT SIDE order placed..')
 		// if we are posting options only or have sufficient collateral do deposit: process
-	} else if (leftPosKey && (leftSideUsesOptions || sufficientCollateral)) {
+		// additionally for left side orders we check minOptionPriceTriggered
+	} else if (
+		!left.minOptionPriceTriggered &&
+		(left.usesOptions || sufficientCollateral)
+	) {
 		// LEFT SIDE ORDER
 		await depositRangeOrderLiq(
 			market,
@@ -514,9 +511,9 @@ async function processDeposits(
 			poolAddress,
 			strike,
 			maturityString,
-			leftPosKey,
+			left.posKey!, // null only if minOptionPriceTriggered || isValidWith = false
 			true,
-			parseUnits(String(leftSideCollateralAmount), decimals),
+			parseUnits(String(left.collateralAmount), decimals),
 			isCall,
 		)
 	}
@@ -529,7 +526,7 @@ async function prepareRightSideOrder(
 	marketPrice: number,
 	optionPrice: number,
 	longBalance: number,
-) {
+): Promise<RangeOrderSpecs> {
 	const rightRefPrice = marketPrice > optionPrice ? marketPrice : optionPrice
 	const marketPriceUpper =
 		Math.ceil((rightRefPrice * (1 + defaultSpread) + 0.001) * 1000) / 1000
@@ -541,11 +538,24 @@ async function prepareRightSideOrder(
 	log.debug(`${isCall ? 'Call' : 'Put'} marketPriceUpper: ${marketPriceUpper}`)
 	log.debug(`${isCall ? 'Call' : 'Put'} targetUpper: ${targetUpperTick}`)
 
-	const [lowerTickCS, upperTickCS] = getValidRangeWidth(
-		marketPriceUpper,
-		targetUpperTick,
-		'RIGHT',
-	)
+	let lowerTickCS: number
+	let upperTickCS: number
+	try {
+		;[lowerTickCS, upperTickCS] = getValidRangeWidth(
+			marketPriceUpper,
+			targetUpperTick,
+			'RIGHT',
+		)
+	} catch (err) {
+		log.warning(`Unable to deploy right side liq due to invalid Range Width`)
+		log.debug(`Error message for getValidRangeWidth ${err}`)
+		return {
+			posKey: null,
+			collateralAmount: 0,
+			isValidWidth: false, // critical violation
+			usesOptions: false,
+		}
+	}
 
 	log.info(
 		`Final RIGHT SIDE Order-> Lower: ${lowerTickCS} and Upper: ${upperTickCS}`,
@@ -575,9 +585,12 @@ async function prepareRightSideOrder(
 		strike,
 	)
 
+	// This represents a valid object with NO violations
 	return {
-		rightPosKey,
-		rightSideCollateralAmount,
+		posKey: rightPosKey,
+		collateralAmount: rightSideCollateralAmount,
+		isValidWidth: true,
+		usesOptions: rightSideCollateralAmount == 0,
 	}
 }
 
@@ -589,9 +602,12 @@ async function prepareLeftSideOrder(
 	marketPrice: number,
 	optionPrice: number,
 	shortBalance: number,
-) {
+	botDeployedPool: boolean,
+): Promise<RangeOrderSpecs> {
 	// set default values in case we violate minOptionPrice and skip section
-	const leftRefPrice = marketPrice < optionPrice ? marketPrice : optionPrice
+	// NOTE: if the pool was freshly deployed, we use the fair value price instead
+	const leftRefPrice =
+		marketPrice < optionPrice && !botDeployedPool ? marketPrice : optionPrice
 
 	let leftSideCollateralAmount = 0
 	let leftPosKey: PosKey | undefined
@@ -608,11 +624,25 @@ async function prepareLeftSideOrder(
 		)
 		log.debug(`${isCall ? 'Call' : 'Put'} targetLower: ${targetLowerTick}`)
 
-		const [lowerTickLC, upperTickLC] = getValidRangeWidth(
-			targetLowerTick,
-			marketPriceLower,
-			'LEFT',
-		)
+		let lowerTickLC: number
+		let upperTickLC: number
+		try {
+			;[lowerTickLC, upperTickLC] = getValidRangeWidth(
+				targetLowerTick,
+				marketPriceLower,
+				'LEFT',
+			)
+		} catch (err) {
+			log.warning(`Unable to deploy left side liq due to invalid Range Width`)
+			log.debug(`Error message for getValidRangeWidth ${err}`)
+			return {
+				posKey: null,
+				collateralAmount: 0,
+				isValidWidth: false, // critical value
+				usesOptions: false,
+				minOptionPriceTriggered: false,
+			}
+		}
 
 		log.info(
 			`Final LEFT SIDE Order-> Lower: ${lowerTickLC} and Upper: ${upperTickLC}`,
@@ -642,7 +672,14 @@ async function prepareLeftSideOrder(
 			strike,
 		)
 
-		return { leftPosKey, leftSideCollateralAmount }
+		// This represents a valid object with NO violations
+		return {
+			posKey: leftPosKey,
+			collateralAmount: leftSideCollateralAmount,
+			isValidWidth: true,
+			usesOptions: leftSideCollateralAmount == 0,
+			minOptionPriceTriggered: false,
+		}
 	} else {
 		// If price of option is too low, we do NOT want to place an LEFT side range order
 		// NOTE: we do not process a trade if price is equal to minOptionPrice
@@ -651,8 +688,13 @@ async function prepareLeftSideOrder(
 				isCall ? 'Calls' : 'Puts'
 			}`,
 		)
-
-		return { leftPosKey: null, leftSideCollateralAmount: 0 }
+		return {
+			posKey: null,
+			collateralAmount: 0,
+			isValidWidth: true,
+			usesOptions: false,
+			minOptionPriceTriggered: true, // critical value
+		}
 	}
 }
 
@@ -666,7 +708,7 @@ async function deployPool(
 ) {
 	try {
 		const deploymentTx = await poolFactory.deployPool(poolKey, {
-			gasLimit: 10_000_000, // fails to properly estimate gas limit
+			gasLimit: (await poolFactory.deployPool.estimateGas(poolKey)) + 100_000n,
 		})
 
 		const confirm = await deploymentTx.wait(1)
@@ -699,7 +741,8 @@ async function annihilatePositions(
 ) {
 	try {
 		const annihilateTx = await executablePool.annihilate(poolBalance, {
-			gasLimit: 10_000_000,
+			gasLimit:
+				(await executablePool.annihilate.estimateGas(poolBalance)) + 100_000n,
 		})
 		const confirm = await annihilateTx.wait(1)
 
@@ -833,6 +876,17 @@ async function depositPosition(
 	retry: boolean = true,
 ) {
 	try {
+		const depositTxGasEst = await executablePool[
+			'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)'
+		].estimateGas(
+			posKey,
+			nearestBelow.nearestBelowLower,
+			nearestBelow.nearestBelowUpper,
+			depositSize,
+			0n,
+			parseEther('1'),
+		)
+
 		const depositTx = await executablePool[
 			'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)'
 		](
@@ -843,7 +897,7 @@ async function depositPosition(
 			0n,
 			parseEther('1'),
 			{
-				gasLimit: 10_000_000, // Fails to properly estimate gas limit
+				gasLimit: depositTxGasEst + 100_000n,
 			},
 		)
 

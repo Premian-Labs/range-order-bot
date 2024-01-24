@@ -1,5 +1,5 @@
 import { Option } from '@uqee/black-scholes'
-import uniqBy from 'lodash.uniqby'
+import { uniqBy } from 'lodash'
 
 import { marketParams, defaultSpread } from '../config'
 import { state } from '../config/state'
@@ -51,6 +51,8 @@ export async function getUpdateOptionParams(
 			const maturityTimestamp = createExpiration(existingPosition.maturity)
 			const ttm = getTTM(maturityTimestamp)
 
+			// NOTE: if ttm is < 0, the iv = 0 and option = undefined
+			// NOTE: on either oracle failure, both values are undefined
 			const [iv, option] = await getGreeksAndIV(
 				existingPosition.market,
 				curPrice,
@@ -66,11 +68,11 @@ export async function getUpdateOptionParams(
 				strike: existingPosition.strike,
 				spotPrice: curPrice,
 				ts,
-				iv: ttm > 0 ? iv : undefined,
-				optionPrice: ttm > 0 ? option?.price : undefined,
-				delta: ttm > 0 ? option?.delta : undefined,
-				theta: ttm > 0 ? option?.theta : undefined,
-				vega: ttm > 0 ? option?.vega : undefined,
+				iv,
+				optionPrice: option?.price,
+				delta: option?.delta,
+				theta: option?.theta,
+				vega: option?.vega,
 				cycleOrders: true, // set to establish position in first cycle
 				ivOracleFailure: iv === undefined,
 				spotOracleFailure: curPrice === undefined,
@@ -116,6 +118,8 @@ async function processCallsAndPuts(
 	// CALLS
 	await Promise.all(
 		marketParams[market].callStrikes!.map(async (strike) => {
+			// NOTE: if ttm is < 0, the iv = 0 and option = undefined
+			// NOTE: on either oracle failure, both values are undefined
 			const [iv, option] = await getGreeksAndIV(
 				market,
 				spotPrice,
@@ -147,11 +151,11 @@ async function processCallsAndPuts(
 						strike,
 						spotPrice,
 						ts,
-						iv: ttm > 0 ? iv : undefined,
-						optionPrice: ttm > 0 ? option?.price : undefined,
-						delta: ttm > 0 ? option?.delta : undefined,
-						theta: ttm > 0 ? option?.theta : undefined,
-						vega: ttm > 0 ? option?.vega : undefined,
+						iv,
+						optionPrice: option?.price,
+						delta: option?.delta,
+						theta: option?.theta,
+						vega: option?.vega,
 						cycleOrders: true, // set to establish position in first cycle
 						ivOracleFailure: iv === undefined,
 						spotOracleFailure: spotPrice === undefined,
@@ -181,6 +185,8 @@ async function processCallsAndPuts(
 	// PUTS
 	await Promise.all(
 		marketParams[market].putStrikes!.map(async (strike) => {
+			// NOTE: if ttm is < 0, the iv = 0 and option = undefined
+			// NOTE: on either oracle failure, both values are undefined
 			const [iv, option] = await getGreeksAndIV(
 				market,
 				spotPrice,
@@ -205,11 +211,11 @@ async function processCallsAndPuts(
 						strike,
 						spotPrice,
 						ts,
-						iv: ttm > 0 ? iv : undefined,
-						optionPrice: ttm > 0 ? option?.price : undefined,
-						delta: ttm > 0 ? option?.delta : undefined,
-						theta: ttm > 0 ? option?.theta : undefined,
-						vega: ttm > 0 ? option?.vega : undefined,
+						iv,
+						optionPrice: option?.price,
+						delta: option?.delta,
+						theta: option?.theta,
+						vega: option?.vega,
 						cycleOrders: true, // set to establish position in first cycle
 						ivOracleFailure: iv === undefined,
 						spotOracleFailure: spotPrice === undefined,
@@ -270,7 +276,7 @@ function checkForUpdate(
 	if (ttm < 0) {
 		state.optionParams[optionIndex].spotPrice = spotPrice
 		state.optionParams[optionIndex].ts = ts
-		state.optionParams[optionIndex].iv = undefined
+		state.optionParams[optionIndex].iv = 0
 		state.optionParams[optionIndex].optionPrice = undefined
 		state.optionParams[optionIndex].delta = undefined
 		state.optionParams[optionIndex].theta = undefined

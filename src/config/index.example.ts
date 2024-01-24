@@ -63,19 +63,75 @@ export const logLevel: LogLevel = 'DEBUG'
 
 export const marketParams: MarketParams = {
 	WETH: {
-		maturities: ['08DEC23', '15DEC23'],
-		callStrikes: [2000],
-		putStrikes: [1900],
+		maturities: ['08DEC23', '15DEC23', '22DEC23', '29DEC23', '05JAN24', '26JAN24'],
+		callStrikes: [2000, 2100, 2200, 2300, 2400, 2500, 2600, 2700, 2800, 2900, 3000],
+		putStrikes: [1900, 2000, 2100, 2200, 2300, 2400, 2500],
+		depositSize: 0.2,
+		maxExposure: 0.4,
+		minOptionPrice: 0.003,
+	},
+	WBTC: {
+		maturities: ['08DEC23', '15DEC23', '22DEC23', '29DEC23'],
+		callStrikes: [35000, 40000, 44000, 45000, 46000, 47000, 48000, 49000, 50000],
+		putStrikes: [35000, 40000,41000, 42000, 43000, 44000, 45000],
+		depositSize: 0.01,
+		maxExposure: 0.02,
+		minOptionPrice: 0.003,
+	},
+	ARB: {
+		maturities: ['08DEC23', '15DEC23', '22DEC23', '29DEC23', '26JAN23'],
+		callStrikes: [1, 1.1, 1.2, 1.3, 1.4, 1.5],
+		putStrikes: [0.90, 0.95, 1, 1.1, 1.2, 1.3],
+		depositSize: 250,
+		maxExposure: 500,
+		minOptionPrice: 0.005,
+	},
+	SOL: {
+		maturities: ['08DEC23', '15DEC23', '22DEC23', '29DEC23', '26JAN23'],
+		callStrikes: [60, 65, 70, 75, 80, 85],
+		putStrikes: [65, 60, 55, 50, 45],
 		depositSize: 1,
 		maxExposure: 2,
 		minOptionPrice: 0.003,
 	},
-	WBTC: {
-		maturities: ['08DEC23', '15DEC23'],
-		callStrikes: [35000],
-		putStrikes: [35000],
-		depositSize: 0.05,
-		maxExposure: 0.1,
+	GMX: {
+		maturities: ['08DEC23', '15DEC23', '22DEC23', '29DEC23', '26JAN23'],
+		callStrikes: [45, 50, 55, 60, 65, 70, 75],
+		putStrikes: [60, 55, 50, 45, 40, 35],
+		depositSize: 1,
+		maxExposure: 2,
+		minOptionPrice: 0.003,
+	},
+	MAGIC: {
+		maturities: ['08DEC23', '15DEC23', '22DEC23', '29DEC23', '26JAN23'],
+		callStrikes: [0.80, 0.85, 0.90, 0.95, 1, 1.1, 1.2, 1.3, 1.4, 1.5],
+		putStrikes: [0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1],
+		depositSize: 1,
+		maxExposure: 2,
+		minOptionPrice: 0.003,
+	},
+	wstETH: {
+		maturities: ['08DEC23', '15DEC23', '22DEC23', '29DEC23', '26JAN23'],
+		callStrikes: [2500, 2600, 2700, 2800, 2900, 3000, 3100, 3200],
+		putStrikes: [2100, 2200, 2300, 2400, 2500, 2600, 2700, 2800],
+		depositSize: 1,
+		maxExposure: 2,
+		minOptionPrice: 0.003,
+	},
+	LINK: {
+		maturities: ['08DEC23', '15DEC23', '22DEC23', '29DEC23', '26JAN23'],
+		callStrikes: [13, 14, 15, 16, 17, 18, 19, 20],
+		putStrikes: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+		depositSize: 1,
+		maxExposure: 2,
+		minOptionPrice: 0.003,
+	},
+	FXS: {
+		maturities: ['08DEC23', '15DEC23', '22DEC23', '29DEC23', '26JAN23'],
+		callStrikes: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+		putStrikes: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+		depositSize: 1,
+		maxExposure: 2,
 		minOptionPrice: 0.003,
 	},
 }
@@ -109,7 +165,7 @@ export const autoGenerateStrikes = false
 	NOTE: minDelta MUST be less than maxDelta
  */
 export const minDelta = 0.1 // .15 recommended
-export const maxDelta = 0.8 // .6 recommended
+export const maxDelta = 0.6 // .6 recommended
 
 /*
 	If an option market falls below this threshold, it will automatically be excluded from new
@@ -183,4 +239,4 @@ export const autoDeploy = true
 	This is the risk-free rate used in determining the option value via bsm.
 	The value is a percentage represented in decimal form (type: number)
  */
-export const riskFreeRate = 0.05
+export const riskFreeRate = 0.075

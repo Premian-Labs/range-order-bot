@@ -83,3 +83,11 @@ export interface MarketSummary {
 }
 
 export type PortfolioSummary = Record<string, MarketSummary>
+
+export interface RangeOrderSpecs {
+	posKey: PosKey | null
+	collateralAmount: number
+	isValidWidth: boolean
+	usesOptions: boolean
+	minOptionPriceTriggered?: boolean //leftSide ranges only
+}
