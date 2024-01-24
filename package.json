@@ -14,7 +14,7 @@
 		"market-making"
 	],
 	"scripts": {
-		"build": "tsc --build",
+		"build": "tsc --build ./",
 		"prettier": "./node_modules/.bin/prettier --write --ignore-path .gitignore ./src/**",
 		"start": "bun ts-node src/index.ts"
 	},
@@ -27,6 +27,7 @@
 		"@uqee/black-scholes": "^1.0.7",
 		"dotenv": "^16.3.1",
 		"ethers": "^6.9.0",
+		"bun": "1.0.25",
 		"ethers-multicall-provider": "^5.0.0",
 		"lodash.flatten": "^4.4.0",
 		"lodash.isequal": "^4.5.0",
