@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 /*
 	NOTE: Trade related settings may need to be tweaked from time to time depending on risk,
 	market conditions, and changes in available strikes/expirations
@@ -241,5 +240,3 @@ export const autoDeploy = true
 	The value is a percentage represented in decimal form (type: number)
  */
 export const riskFreeRate = 0.075
-=======
->>>>>>> Stashed changes
