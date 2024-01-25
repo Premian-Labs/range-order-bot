@@ -59,6 +59,14 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 4. Navigate to `src/config/index.example.ts` and rename it to `index.ts`. Review each and every setting. Instructions & descriptions of settings are provided in the example file.
 5. Run `yarn start` in the command line to run the range order bot.
 
+[![Watch the tutorial video](https://img.youtube.com/vi/RLrytK1lMh4/maxresdefault.jpg)](https://youtu.be/RLrytK1lMh4)
+
+One Click Deploys (Just bring a Wallet and RPC)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/URNlTZ?referralCode=JQ7ELw)
+To Choose Assets and Strikes creating your own container is recommended, however this Railway template is fully compatible.
+
+<video src="https://www.youtube.com/watch?v=RLrytK1lMh4"></video>
+
 ## Under The Hood
 
 At this point, you should have a general idea of what this bot is supposed to do (hint: it makes markets in options).
@@ -97,3 +105,5 @@ many things the bot does NOT do.  They include:
 -[ ] Create parameter to allow taker orders for mispriced options prior to range deposits
 
 -[ ] Enable the use of other quote tokens besides USDC
+
+-[ ] Dynamic Asset & Strike Selection
