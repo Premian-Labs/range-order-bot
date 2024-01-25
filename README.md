@@ -62,10 +62,13 @@ base token (ie WETH) is used for call collateral, and the quote token (ie USDC) 
 [![Watch the tutorial video](https://img.youtube.com/vi/RLrytK1lMh4/maxresdefault.jpg)](https://youtu.be/RLrytK1lMh4)
 
 One Click Deploys (Just bring a Wallet and RPC)
+
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/URNlTZ?referralCode=JQ7ELw)
+
+
 To Choose Assets and Strikes creating your own container is recommended, however this Railway template is fully compatible.
 
-<video src="https://www.youtube.com/watch?v=RLrytK1lMh4"></video>
+https://www.youtube.com/watch?v=RLrytK1lMh4
 
 ## Under The Hood
 
